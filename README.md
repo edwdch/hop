@@ -1,15 +1,6 @@
-# dom
+# Install Dependencies
 
-To install dependencies:
-
-```bash
-bun install
 ```
-
-To run:
-
-```bash
-bun run index.ts
+curl https://github.com/steveiliop56/tinyauth/releases/download/v4.1.0/tinyauth-amd64 -o dom/tinyauth
+chmod +x dom/tinyauth
 ```
-
-This project was created using `bun init` in bun v1.3.6. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
