@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Rocket, User, LogOut, Construction, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useSession, logout } from '@/api/auth';
 
 export default function HomePage() {
@@ -30,6 +31,7 @@ export default function HomePage() {
             <h1 className="text-xl font-semibold">Hop 代理管理</h1>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <div className="flex items-center gap-2 text-muted-foreground">
               <User className="h-4 w-4" />
               <span className="text-sm">{session?.user?.name || session?.user?.email}</span>
