@@ -6,6 +6,17 @@ import { nginxPlugin } from './nginx';
 import { resolve, dirname, join } from 'path';
 import { existsSync } from 'fs';
 
+// 尝试加载嵌入资源（构建时生成）
+let embeddedAssets: Record<string, string> = {};
+let useEmbeddedAssets = false;
+try {
+    const assets = await import('./embedded-assets');
+    embeddedAssets = assets.embeddedAssets;
+    useEmbeddedAssets = Object.keys(embeddedAssets).length > 0;
+} catch {
+    // 开发模式下没有嵌入资源
+}
+
 // 获取项目根目录 (dom/)
 const ROOT_DIR = resolve(dirname(import.meta.dir));
 const DIST_DIR = resolve(ROOT_DIR, 'dist');
@@ -78,8 +89,36 @@ const app = new Elysia()
         if (pathname.startsWith('/api/')) {
             return;
         }
+
+        // 优先使用嵌入资源（二进制模式）
+        if (useEmbeddedAssets) {
+            // 尝试作为静态文件提供
+            let assetPath = pathname;
+            
+            // 如果路径不包含扩展名，尝试作为 SPA 路由处理
+            if (!pathname.includes('.')) {
+                assetPath = '/index.html';
+            }
+            
+            const embeddedPath = embeddedAssets[assetPath];
+            if (embeddedPath) {
+                const file = Bun.file(embeddedPath);
+                set.headers['content-type'] = getMimeType(assetPath);
+                return file;
+            }
+            
+            // 文件不存在，返回 index.html (SPA fallback)
+            const indexPath = embeddedAssets['/index.html'];
+            if (indexPath) {
+                set.headers['content-type'] = 'text/html';
+                return Bun.file(indexPath);
+            }
+            
+            set.status = 404;
+            return 'Not Found';
+        }
         
-        // 尝试作为静态文件提供
+        // 开发模式：从 dist 目录读取文件
         let filePath = join(DIST_DIR, pathname);
         
         // 如果路径不包含扩展名，尝试作为 SPA 路由处理
