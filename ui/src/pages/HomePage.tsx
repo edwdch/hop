@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { 
-    Terminal, 
-    User, 
-    LogOut, 
-    Loader2, 
-    Globe, 
-    Settings, 
-    FileCode, 
+import {
+    Terminal,
+    User,
+    LogOut,
+    Loader2,
+    Globe,
+    Settings,
+    FileCode,
     Shield,
     File,
     ChevronRight,
@@ -65,12 +65,12 @@ export default function HomePage() {
     const [loadingSites, setLoadingSites] = useState(true);
     const [testing, setTesting] = useState(false);
     const [reloading, setReloading] = useState(false);
-    
+
     // 创建站点弹窗状态
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [newSiteName, setNewSiteName] = useState('');
     const [creating, setCreating] = useState(false);
-    
+
     // 删除站点弹窗状态
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [siteToDelete, setSiteToDelete] = useState<SiteInfo | null>(null);
@@ -233,14 +233,14 @@ export default function HomePage() {
                             </div>
                             <span className="text-lg font-bold tracking-tight font-mono hidden sm:block">HOP</span>
                         </div>
-                        
+
                         {/* Separator */}
                         <div className="w-px h-6 bg-border hidden md:block" />
-                        
+
                         {/* Quick nav */}
                         <nav className="hidden md:flex items-center gap-1">
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => navigate('/nginx/edit?type=main')}
                                 className="gap-2 font-mono text-xs uppercase tracking-wider"
@@ -248,8 +248,8 @@ export default function HomePage() {
                                 <Settings className="h-3.5 w-3.5 text-primary" />
                                 主配置
                             </Button>
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => navigate('/nginx/browse?dir=snippets')}
                                 className="gap-2 font-mono text-xs uppercase tracking-wider"
@@ -257,8 +257,8 @@ export default function HomePage() {
                                 <FileCode className="h-3.5 w-3.5 text-accent" />
                                 片段
                             </Button>
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => navigate('/nginx/browse?dir=ssl')}
                                 className="gap-2 font-mono text-xs uppercase tracking-wider"
@@ -268,12 +268,12 @@ export default function HomePage() {
                             </Button>
                         </nav>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                         {/* Nginx controls */}
                         <div className="flex items-center gap-1 mr-2">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={handleTest}
                                 disabled={testing}
@@ -286,7 +286,7 @@ export default function HomePage() {
                                 )}
                                 <span className="hidden sm:inline">测试</span>
                             </Button>
-                            <Button 
+                            <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleReload}
@@ -301,18 +301,21 @@ export default function HomePage() {
                                 <span className="hidden sm:inline">重载</span>
                             </Button>
                         </div>
-                        
+
                         <div className="w-px h-6 bg-border" />
-                        
+
                         <ThemeToggle />
-                        
-                        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border/50">
-                            <User className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-xs font-mono text-muted-foreground">
-                                {session?.user?.name || session?.user?.email}
-                            </span>
-                        </div>
-                        
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="hidden lg:flex gap-2 font-mono text-xs"
+                        >
+                            <User className="h-3.5 w-3.5" />
+                            {session?.user?.name || session?.user?.email}
+                        </Button>
+
                         <Button variant="ghost" size="icon-sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
                             <LogOut className="h-4 w-4" />
                         </Button>
@@ -375,8 +378,8 @@ export default function HomePage() {
                                 <span className="text-xs font-mono text-muted-foreground px-2 py-1 bg-muted hidden sm:block">
                                     {sites.length} 个站点
                                 </span>
-                                <Button 
-                                    size="sm" 
+                                <Button
+                                    size="sm"
                                     onClick={() => setCreateDialogOpen(true)}
                                     className="gap-2 font-mono text-xs"
                                 >
@@ -385,7 +388,7 @@ export default function HomePage() {
                                 </Button>
                             </div>
                         </div>
-                        
+
                         {/* Table header */}
                         <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 border-b bg-muted/30 text-xs font-mono uppercase text-muted-foreground">
                             <span>站点</span>
@@ -393,7 +396,7 @@ export default function HomePage() {
                             <span className="w-32 text-right hidden md:block">修改时间</span>
                             <span className="w-16"></span>
                         </div>
-                        
+
                         {/* Sites list */}
                         <div className="divide-y divide-border/50">
                             {loadingSites ? (
@@ -405,8 +408,8 @@ export default function HomePage() {
                                     <Globe className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
                                     <p className="text-muted-foreground font-mono text-sm">暂无配置文件</p>
                                     <p className="text-xs text-muted-foreground/60 mt-1 mb-4">点击上方按钮创建新站点</p>
-                                    <Button 
-                                        variant="outline" 
+                                    <Button
+                                        variant="outline"
                                         size="sm"
                                         onClick={() => setCreateDialogOpen(true)}
                                         className="gap-2"
@@ -462,24 +465,24 @@ export default function HomePage() {
 
                     {/* Quick actions - mobile */}
                     <div className="grid grid-cols-3 gap-2 md:hidden animate-fade-up opacity-0 stagger-6">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => navigate('/nginx/edit?type=main')}
                             className="flex-col h-auto py-4 gap-2"
                         >
                             <Settings className="h-5 w-5 text-primary" />
                             <span className="text-xs font-mono">主配置</span>
                         </Button>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => navigate('/nginx/browse?dir=snippets')}
                             className="flex-col h-auto py-4 gap-2"
                         >
                             <FileCode className="h-5 w-5 text-accent" />
                             <span className="text-xs font-mono">片段</span>
                         </Button>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => navigate('/nginx/browse?dir=ssl')}
                             className="flex-col h-auto py-4 gap-2"
                         >

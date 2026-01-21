@@ -26,7 +26,7 @@ export function ThemeToggle() {
   return (
     <Button
       variant="outline"
-      size="icon"
+      size="sm"
       onClick={toggleTheme}
       title={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
     >
@@ -35,7 +35,7 @@ export function ThemeToggle() {
       ) : (
         <Moon className="h-[1.2rem] w-[1.2rem]" />
       )}
-      <span className="sr-only">切换主题</span>
+      <span>切换主题</span>
     </Button>
   );
 }
