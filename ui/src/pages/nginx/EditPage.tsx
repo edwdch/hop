@@ -7,10 +7,11 @@ import {
     CheckCircle2, 
     Loader2,
     RefreshCw,
-    FileText
+    FileText,
+    Terminal,
+    AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { NginxEditor } from '@/components/editor/NginxEditor';
 import { readFile, readMainConfig, saveFile, testNginxConfig, reloadNginx } from '@/api/nginx';
 
@@ -70,7 +71,7 @@ export default function EditPage() {
             const result = await saveFile(currentPath, content);
             if (result.success) {
                 setOriginalContent(content);
-                toast.success('保存成功');
+                toast.success('文件已保存');
             } else {
                 toast.error('保存失败', { description: result.error });
             }
@@ -86,12 +87,12 @@ export default function EditPage() {
         try {
             const result = await testNginxConfig();
             if (result.success) {
-                toast.success('配置测试通过', { description: result.output });
+                toast.success('配置验证通过', { description: result.output });
             } else {
-                toast.error('配置测试失败', { description: result.output });
+                toast.error('配置验证失败', { description: result.output });
             }
         } catch (err) {
-            toast.error('测试失败', { description: (err as Error).message });
+            toast.error('验证失败', { description: (err as Error).message });
         } finally {
             setTesting(false);
         }
@@ -116,76 +117,150 @@ export default function EditPage() {
     const hasChanges = content !== originalContent;
 
     return (
-        <div className="container mx-auto p-6 max-w-7xl">
+        <div className="min-h-screen flex flex-col bg-background">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold flex items-center gap-2">
-                            <FileText className="h-6 w-6" />
-                            {fileName || '配置编辑器'}
-                        </h1>
-                        <p className="text-sm text-muted-foreground">{currentPath}</p>
+            <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50 animate-fade-in opacity-0 stagger-1">
+                <div className="flex h-14 items-center justify-between px-4 lg:px-6">
+                    <div className="flex items-center gap-4">
+                        <Button 
+                            variant="ghost" 
+                            size="icon-sm" 
+                            onClick={() => navigate('/')}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        
+                        <div className="w-px h-6 bg-border" />
+                        
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-primary/10 flex items-center justify-center">
+                                <FileText className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h1 className="font-mono text-sm font-medium truncate">
+                                        {fileName || '配置文件'}
+                                    </h1>
+                                    {hasChanges && (
+                                        <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground font-mono truncate max-w-[200px] lg:max-w-md">
+                                    {currentPath}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleTest}
+                            disabled={testing}
+                            className="gap-2 font-mono text-xs"
+                        >
+                            {testing ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            <span className="hidden sm:inline">测试</span>
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={handleReload}
+                            disabled={reloading}
+                            className="gap-2 font-mono text-xs"
+                        >
+                            {reloading ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-3.5 w-3.5" />
+                            )}
+                            <span className="hidden sm:inline">重载</span>
+                        </Button>
+                        
+                        <div className="w-px h-6 bg-border" />
+                        
+                        <Button 
+                            size="sm"
+                            onClick={handleSave}
+                            disabled={saving || !hasChanges}
+                            className="gap-2 font-mono text-xs"
+                        >
+                            {saving ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                                <Save className="h-3.5 w-3.5" />
+                            )}
+                            <span>保存</span>
+                            {hasChanges && <span className="text-primary-foreground/60">*</span>}
+                        </Button>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button 
-                        variant="outline" 
-                        onClick={handleTest}
-                        disabled={testing}
-                    >
-                        {testing ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                        )}
-                        测试配置
-                    </Button>
-                    <Button 
-                        variant="outline"
-                        onClick={handleReload}
-                        disabled={reloading}
-                    >
-                        {reloading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                        )}
-                        重载 Nginx
-                    </Button>
-                    <Button 
-                        onClick={handleSave}
-                        disabled={saving || !hasChanges}
-                    >
-                        {saving ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Save className="mr-2 h-4 w-4" />
-                        )}
-                        保存 {hasChanges && '*'}
-                    </Button>
-                </div>
-            </div>
+            </header>
 
-            {/* Editor */}
-            <Card>
-                <CardContent className="p-0">
-                    {loading ? (
-                        <div className="flex items-center justify-center py-24">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            {/* Editor area */}
+            <main className="flex-1 flex flex-col animate-fade-up opacity-0 stagger-2">
+                {loading ? (
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-4">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <span className="text-sm font-mono text-muted-foreground">正在加载文件...</span>
                         </div>
-                    ) : (
-                        <NginxEditor
-                            value={content}
-                            onChange={setContent}
-                            height="calc(100vh - 200px)"
-                        />
-                    )}
-                </CardContent>
-            </Card>
+                    </div>
+                ) : (
+                    <div className="flex-1 relative">
+                        {/* Editor container with industrial border */}
+                        <div className="absolute inset-4 lg:inset-6 border border-border/50 bg-card overflow-hidden">
+                            {/* Editor toolbar */}
+                            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+                                <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+                                    <Terminal className="h-3.5 w-3.5" />
+                                    <span>NGINX CONFIG</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+                                    {hasChanges && (
+                                        <div className="flex items-center gap-1.5 text-accent">
+                                            <AlertTriangle className="h-3 w-3" />
+                                            <span>未保存的更改</span>
+                                        </div>
+                                    )}
+                                    <span>{content.split('\n').length} 行</span>
+                                </div>
+                            </div>
+                            
+                            {/* Editor */}
+                            <div className="h-[calc(100%-40px)]">
+                                <NginxEditor
+                                    value={content}
+                                    onChange={setContent}
+                                    height="100%"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </main>
+
+            {/* Footer status bar */}
+            <footer className="border-t bg-muted/30 p-3 animate-fade-in opacity-0 stagger-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground font-mono px-2">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className={`status-dot ${hasChanges ? 'status-dot-warning' : 'status-dot-online'}`} />
+                            <span>{hasChanges ? '有未保存的更改' : '已同步'}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <span>UTF-8</span>
+                        <span>Nginx Config</span>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 }
