@@ -2,8 +2,6 @@
 
 env_files = []
 root = "."
-testdata_dir = "testdata"
-tmp_dir = "tmp"
 
 [build]
 # 使用你的 Makefile 目标进行编译，确保 LDFLAGS 生效

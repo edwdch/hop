@@ -271,13 +271,13 @@ export default function HomePage() {
 
                     <div className="flex items-center gap-2">
                         {/* Nginx controls */}
-                        <div className="flex items-center gap-1 mr-2">
+                        <div className="flex items-center gap-1">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleTest}
                                 disabled={testing}
-                                className="gap-2 font-mono text-xs"
+                                className="gap-2 font-mono text-xs mr-1"
                             >
                                 {testing ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
