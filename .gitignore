@@ -39,3 +39,4 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 bin/
 dom/data/hop.db
 hop
+dom/config.toml
