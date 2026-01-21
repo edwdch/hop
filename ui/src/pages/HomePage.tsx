@@ -433,9 +433,6 @@ export default function HomePage() {
                                                 <p className="font-mono text-sm font-medium truncate">
                                                     {site.serverNames.length > 0 ? site.serverNames.join(' · ') : site.name}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground font-mono truncate">
-                                                    {site.path}
-                                                </p>
                                             </div>
                                         </div>
                                         <span className="text-xs font-mono text-muted-foreground w-20 text-right hidden sm:block">
