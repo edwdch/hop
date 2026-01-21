@@ -3,12 +3,14 @@ package nginx
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
+	"github.com/hop/backend/internal/config"
 	"github.com/hop/backend/internal/database"
 )
 
@@ -30,12 +32,40 @@ type ProxySite struct {
 
 	// 功能选项
 	WebSocket bool `json:"websocket"` // 是否支持 WebSocket
+
+	// 认证配置（登录 URL 和 Cookie 域名从全局配置读取）
+	AuthEnabled bool `json:"authEnabled"` // 是否启用访问认证
+}
+
+// proxyTemplateData 用于模板渲染的数据结构
+type proxyTemplateData struct {
+	ProxySite
+	AuthLoginURL     string // 从全局配置读取
+	AuthCookieDomain string // 从全局配置读取，如果为空则自动从站点域名提取
 }
 
 // proxyTemplate 代理站点配置模板
 const proxyTemplate = `# 由 Hop 自动生成，请勿手动修改
 # 站点: {{.ServerName}}
+{{if .AuthEnabled}}
+# 认证配置
+location = /auth-validate {
+    internal;
+    proxy_pass http://127.0.0.1:3000/api/auth/nginx;
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $http_host;
+    proxy_set_header X-Forwarded-URI $request_uri;
+}
 
+error_page 401 = @error401;
+location @error401 {
+    return 302 {{.AuthLoginURL}}?redirect_uri=$scheme://$http_host$request_uri;
+}
+{{end}}
 server {
     listen 444{{if .SSL}} ssl{{end}};
     server_name {{.ServerName}};
@@ -44,6 +74,9 @@ server {
     ssl_certificate_key {{.SSLKey}};
 {{end}}
     location / {
+{{if .AuthEnabled}}
+        auth_request /auth-validate;
+{{end}}
         proxy_pass {{.UpstreamScheme}}://{{.UpstreamHost}}:{{.UpstreamPort}};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -60,15 +93,48 @@ server {
 }
 `
 
+// extractParentDomain 从域名提取父域名
+// 例如: app.example.com -> .example.com
+//
+//	sub.app.example.com -> .example.com
+//	localhost -> "" (本地开发不需要 Domain)
+func extractParentDomain(serverName string) string {
+	// localhost 或 IP 地址不设置 Domain
+	if serverName == "localhost" || net.ParseIP(serverName) != nil {
+		return ""
+	}
+
+	parts := strings.Split(serverName, ".")
+	if len(parts) <= 2 {
+		// 顶级域名，如 example.com，返回带点的形式
+		return "." + serverName
+	}
+
+	// 提取后两段作为父域名: .example.com
+	return "." + strings.Join(parts[len(parts)-2:], ".")
+}
+
 // RenderProxySiteConfig 渲染代理站点配置
 func RenderProxySiteConfig(site ProxySite) (string, error) {
+	return renderProxySiteConfigWithAuth(site, "", "")
+}
+
+// renderProxySiteConfigWithAuth 渲染代理站点配置（带认证信息）
+func renderProxySiteConfigWithAuth(site ProxySite, authLoginURL, authCookieDomain string) (string, error) {
 	tmpl, err := template.New("proxy").Parse(proxyTemplate)
 	if err != nil {
 		return "", fmt.Errorf("解析模板失败: %w", err)
 	}
 
+	// 构建模板数据
+	data := proxyTemplateData{
+		ProxySite:        site,
+		AuthLoginURL:     authLoginURL,
+		AuthCookieDomain: authCookieDomain,
+	}
+
 	var buf strings.Builder
-	if err := tmpl.Execute(&buf, site); err != nil {
+	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", fmt.Errorf("渲染模板失败: %w", err)
 	}
 
@@ -94,6 +160,23 @@ func SaveProxySite(site ProxySite) error {
 		site.UpstreamScheme = "http"
 	}
 
+	// 获取认证相关的全局配置
+	var authLoginURL, authCookieDomain string
+	if site.AuthEnabled {
+		cfg := config.Get()
+		authLoginURL = cfg.Auth.ProxyLoginURL
+		authCookieDomain = cfg.Auth.ProxyCookieDomain
+
+		// 验证登录 URL 必填
+		if authLoginURL == "" {
+			return fmt.Errorf("启用认证时必须在系统设置中配置登录页 URL")
+		}
+		// 自动提取 Cookie 域名（如果全局配置未指定）
+		if authCookieDomain == "" {
+			authCookieDomain = extractParentDomain(site.ServerName)
+		}
+	}
+
 	// 如果启用 SSL 且指定了证书 ID，从数据库获取证书路径
 	if site.SSL && site.CertificateID != "" {
 		cert, err := database.GetCertificate(site.CertificateID)
@@ -111,8 +194,8 @@ func SaveProxySite(site ProxySite) error {
 		site.SSLKey = strings.TrimPrefix(cert.KeyPath, "nginx/")
 	}
 
-	// 渲染配置
-	content, err := RenderProxySiteConfig(site)
+	// 渲染配置（使用认证信息）
+	content, err := renderProxySiteConfigWithAuth(site, authLoginURL, authCookieDomain)
 	if err != nil {
 		return err
 	}

@@ -24,7 +24,9 @@ type ServerConfig struct {
 
 // AuthConfig 认证配置
 type AuthConfig struct {
-	Secret string `toml:"secret"`
+	Secret            string `toml:"secret"`
+	ProxyLoginURL     string `toml:"proxy_login_url"`     // 反向代理统一登录页面 URL
+	ProxyCookieDomain string `toml:"proxy_cookie_domain"` // 反向代理 Cookie 域名（可选，空值表示自动从站点域名提取）
 }
 
 // NginxConfig Nginx 配置
@@ -44,6 +46,7 @@ type DataConfig struct {
 }
 
 var cfg *Config
+var cfgPath string // 配置文件路径
 
 // DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
@@ -53,7 +56,9 @@ func DefaultConfig() *Config {
 			Port: 3000,
 		},
 		Auth: AuthConfig{
-			Secret: "hop-default-secret-please-change-me",
+			Secret:            "hop-default-secret-please-change-me",
+			ProxyLoginURL:     "",
+			ProxyCookieDomain: "",
 		},
 		Nginx: NginxConfig{
 			WorkerProcesses:   "auto",
@@ -73,6 +78,7 @@ func DefaultConfig() *Config {
 func Load(configPath string) (*Config, error) {
 	// 从默认配置开始
 	cfg = DefaultConfig()
+	cfgPath = configPath
 
 	// 读取配置文件
 	data, err := os.ReadFile(configPath)
@@ -118,6 +124,40 @@ func (c *Config) Address() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
 }
 
+// GetPath 获取配置文件路径
+func GetPath() string {
+	return cfgPath
+}
+
+// Save 保存配置到文件
+func Save() error {
+	if cfgPath == "" {
+		return fmt.Errorf("配置文件路径未设置")
+	}
+
+	f, err := os.Create(cfgPath)
+	if err != nil {
+		return fmt.Errorf("无法创建配置文件: %w", err)
+	}
+	defer f.Close()
+
+	encoder := toml.NewEncoder(f)
+	if err := encoder.Encode(cfg); err != nil {
+		return fmt.Errorf("写入配置文件失败: %w", err)
+	}
+
+	return nil
+}
+
+// Update 更新配置（部分更新）
+func Update(updates func(*Config)) error {
+	if cfg == nil {
+		cfg = DefaultConfig()
+	}
+	updates(cfg)
+	return Save()
+}
+
 // GenerateDefault 生成默认配置文件内容
 func GenerateDefault() string {
 	return `# Hop 配置文件
@@ -131,6 +171,13 @@ port = 3000
 [auth]
 # 认证密钥（生产环境请修改为随机字符串）
 secret = "hop-default-secret-please-change-me"
+# 反向代理统一登录页面 URL
+# 当反向代理站点启用认证时，未登录用户将被重定向到此页面
+proxy_login_url = ""
+# 反向代理 Cookie 域名（可选）
+# 用于跨子域共享登录状态，留空则自动从站点域名提取
+# 例如设置为 ".example.com" 可让 a.example.com 和 b.example.com 共享登录状态
+proxy_cookie_domain = ""
 
 [nginx]
 # Nginx 模板参数配置

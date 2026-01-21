@@ -12,7 +12,8 @@ import {
     Server,
     Unlock,
     AlertCircle,
-    ExternalLink
+    ExternalLink,
+    KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +46,7 @@ const defaultSite: ProxySite = {
     upstreamHost: '127.0.0.1',
     upstreamPort: 8080,
     websocket: false,
+    authEnabled: false,
 };
 
 export default function ProxyEditPage() {
@@ -394,6 +396,36 @@ export default function ProxyEditPage() {
                             <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Unlock className="h-4 w-4" />
                                 <span>当前使用 HTTP 协议</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 访问认证配置 */}
+                    <div className="bg-card border p-4 space-y-3 animate-fade-up opacity-0 stagger-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <KeyRound className="h-4 w-4 text-orange-500" />
+                                <h2 className="font-semibold text-sm">访问认证</h2>
+                            </div>
+                            <Switch
+                                checked={site.authEnabled}
+                                onCheckedChange={(checked: boolean) => updateSite({ authEnabled: checked })}
+                            />
+                        </div>
+
+                        {site.authEnabled ? (
+                            <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded">
+                                <p className="text-xs text-blue-500">
+                                    启用后，访问此站点需要先登录 Hop 账户。
+                                    认证配置（登录 URL、Cookie 域名）在
+                                    <Link to="/settings" className="underline font-medium mx-1">系统设置</Link>
+                                    中统一管理。
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                <Unlock className="h-4 w-4" />
+                                <span>当前无需认证即可访问</span>
                             </div>
                         )}
                     </div>

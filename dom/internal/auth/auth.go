@@ -69,6 +69,7 @@ func Router() chi.Router {
 	r.Post("/sign-in/email", handleSignIn)
 	r.Post("/sign-out", handleSignOut)
 	r.Get("/get-session", handleGetSession)
+	r.Get("/nginx", handleNginxAuthValidate)
 
 	return r
 }
@@ -218,12 +219,16 @@ func handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 设置 cookie
-	setSessionCookie(w, session.Token, session.ExpiresAt)
+	// 获取跨域 Cookie 域名参数（用于反向代理认证场景）
+	cookieDomain := r.URL.Query().Get("cookie_domain")
+
+	// 设置 cookie（支持跨域）
+	setSessionCookieWithDomain(w, session.Token, session.ExpiresAt, cookieDomain)
 
 	log.Info("用户登录成功", map[string]interface{}{
-		"userId": user.ID,
-		"email":  user.Email,
+		"userId":       user.ID,
+		"email":        user.Email,
+		"cookieDomain": cookieDomain,
 	})
 
 	jsonResponse(w, map[string]interface{}{
@@ -314,6 +319,48 @@ func handleGetSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleNginxAuthValidate 处理 Nginx auth_request 验证
+// 用于反向代理的身份验证，Nginx 通过 auth_request 指令调用此端点
+func handleNginxAuthValidate(w http.ResponseWriter, r *http.Request) {
+	token := getSessionToken(r)
+	if token == "" {
+		// 未提供 token：返回 401
+		w.Header().Set("X-Auth-Err", "no_token")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	session, err := database.GetSessionByToken(token)
+	if err != nil {
+		// 无效 token：返回 401
+		w.Header().Set("X-Auth-Err", "invalid_token")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// 检查会话是否过期
+	if time.Now().After(session.ExpiresAt) {
+		_ = database.DeleteSession(token)
+		w.Header().Set("X-Auth-Err", "token_expired")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// 获取用户
+	user, err := database.GetUserByID(session.UserID)
+	if err != nil || user == nil {
+		w.Header().Set("X-Auth-Err", "user_not_found")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// 已登录：返回 200，并在 header 中传递用户信息
+	w.Header().Set("X-Auth-User", user.Email)
+	w.Header().Set("X-Auth-UserID", user.ID)
+	w.Header().Set("X-Auth-UserName", user.Name)
+	w.WriteHeader(http.StatusOK)
+}
+
 // GetCurrentUser 获取当前用户（用于中间件）
 func GetCurrentUser(r *http.Request) (*database.User, error) {
 	token := getSessionToken(r)
@@ -358,7 +405,13 @@ func createSession(userID string, r *http.Request) (*database.Session, error) {
 
 // setSessionCookie 设置会话 cookie
 func setSessionCookie(w http.ResponseWriter, token string, expiresAt time.Time) {
-	http.SetCookie(w, &http.Cookie{
+	setSessionCookieWithDomain(w, token, expiresAt, "")
+}
+
+// setSessionCookieWithDomain 设置会话 cookie（支持指定域名）
+// domain 为空时使用当前域名，非空时设置为指定域名（用于跨子域名共享）
+func setSessionCookieWithDomain(w http.ResponseWriter, token string, expiresAt time.Time, domain string) {
+	cookie := &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    token,
 		Path:     "/",
@@ -366,7 +419,12 @@ func setSessionCookie(w http.ResponseWriter, token string, expiresAt time.Time) 
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Secure:   false, // 生产环境应设为 true
-	})
+	}
+	// 如果指定了域名，设置 Domain 属性以支持跨子域名
+	if domain != "" {
+		cookie.Domain = domain
+	}
+	http.SetCookie(w, cookie)
 }
 
 // getSessionToken 获取会话 token

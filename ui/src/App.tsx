@@ -4,7 +4,9 @@ import { Loader2 } from 'lucide-react';
 import { checkNeedInit, useSession } from '@/api/auth';
 import InitPage from '@/pages/InitPage';
 import LoginPage from '@/pages/LoginPage';
+import AuthLoginPage from '@/pages/AuthLoginPage';
 import HomePage from '@/pages/HomePage';
+import SettingsPage from '@/pages/SettingsPage';
 import NginxEditPage from '@/pages/nginx/EditPage';
 import NginxBrowsePage from '@/pages/nginx/BrowsePage';
 import ProxyEditPage from '@/pages/nginx/ProxyEditPage';
@@ -66,6 +68,11 @@ function App() {
         <Route
           path="/login"
           element={needInit ? <Navigate to="/init" replace /> : <LoginPage />}
+        />
+        {/* 统一认证登录页面（用于反向代理认证） */}
+        <Route
+          path="/auth/login"
+          element={needInit ? <Navigate to="/init" replace /> : <AuthLoginPage />}
         />
         {/* 主页面 - 需要登录 */}
         <Route
@@ -129,6 +136,15 @@ function App() {
           element={
             <ProtectedRoute>
               <StreamPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* 系统设置 - 需要登录 */}
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

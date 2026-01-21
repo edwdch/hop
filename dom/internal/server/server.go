@@ -78,6 +78,9 @@ func (s *Server) setupRoutes() {
 
 		// SSL 证书管理路由
 		r.Mount("/ssl", ssl.Router())
+
+		// 配置管理路由
+		r.Mount("/config", configRouter())
 	})
 
 	// 静态文件服务 (SPA)

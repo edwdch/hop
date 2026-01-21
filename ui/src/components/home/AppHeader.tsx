@@ -10,6 +10,7 @@ import {
     RefreshCw,
     Plus,
     Network,
+    Cog,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -91,6 +92,15 @@ export function AppHeader({
                         >
                             <Network className="h-3.5 w-3.5 text-chart-4" />
                             分流
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate('/settings')}
+                            className="gap-2 font-mono text-xs uppercase tracking-wider"
+                        >
+                            <Cog className="h-3.5 w-3.5 text-muted-foreground" />
+                            设置
                         </Button>
                     </nav>
                 </div>

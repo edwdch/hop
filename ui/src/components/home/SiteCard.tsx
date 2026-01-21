@@ -1,4 +1,4 @@
-import { Globe, Trash2, Lock, Zap, ArrowRight } from 'lucide-react';
+import { Globe, Trash2, Lock, Zap, ArrowRight, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { type ProxySite } from '@/api/nginx';
 
@@ -70,7 +70,13 @@ export function SiteCard({ site, index, onDeleteClick, onNavigate }: SiteCardPro
                             WS
                         </span>
                     )}
-                    {!site.ssl && !site.websocket && (
+                    {site.authEnabled && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 text-xs font-mono">
+                            <KeyRound className="h-3 w-3" />
+                            认证
+                        </span>
+                    )}
+                    {!site.ssl && !site.websocket && !site.authEnabled && (
                         <span className="text-xs text-muted-foreground/50 font-mono">
                             基础配置
                         </span>

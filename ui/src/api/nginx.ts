@@ -154,6 +154,9 @@ export interface ProxySite {
     upstreamHost: string;    // 上游主机名/IP
     upstreamPort: number;    // 上游端口
     websocket: boolean;      // 是否支持 WebSocket
+
+    // 认证配置（登录 URL 和 Cookie 域名从系统设置中全局配置）
+    authEnabled: boolean;    // 是否启用访问认证
 }
 
 // 获取代理站点列表
