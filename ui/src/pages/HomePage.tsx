@@ -283,16 +283,12 @@ export default function HomePage() {
                                                 <File className="h-4 w-4 text-muted-foreground" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="font-mono text-sm font-medium truncate">{site.name}</p>
-                                                {site.serverNames.length > 0 ? (
-                                                    <p className="text-xs text-primary font-mono truncate">
-                                                        {site.serverNames.join(' · ')}
-                                                    </p>
-                                                ) : (
-                                                    <p className="text-xs text-muted-foreground/60 italic">
-                                                        未定义 server_name
-                                                    </p>
-                                                )}
+                                                <p className="font-mono text-sm font-medium truncate">
+                                                    {site.serverNames.length > 0 ? site.serverNames.join(' · ') : site.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground font-mono truncate">
+                                                    {site.path}
+                                                </p>
                                             </div>
                                         </div>
                                         <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
