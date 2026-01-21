@@ -24,12 +24,23 @@ export interface FileContent {
     path: string;
     name: string;
     error?: string;
+    readonly?: boolean; // 是否只读（nginx.conf 由模板生成，不可直接编辑）
 }
 
 export interface CommandResult {
     success: boolean;
     output: string;
     error?: string;
+}
+
+// 模板参数类型
+export interface TemplateParams {
+    workerProcesses: string;
+    workerConnections: number;
+    keepalive: number;
+    clientMaxBodySize: string;
+    gzip: boolean;
+    serverTokens: boolean;
 }
 
 const API_BASE = '/api/nginx';
@@ -105,5 +116,27 @@ export async function deleteFile(path: string): Promise<{ success: boolean; erro
     const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`, {
         method: 'DELETE',
     });
+    return res.json();
+}
+
+// 获取模板参数
+export async function getTemplateParams(): Promise<TemplateParams> {
+    const res = await fetch(`${API_BASE}/template-params`);
+    return res.json();
+}
+
+// 保存模板参数并重新生成 nginx.conf
+export async function saveTemplateParams(params: TemplateParams): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE}/template-params`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+    });
+    return res.json();
+}
+
+// 重新生成 nginx.conf（使用当前参数）
+export async function regenerateConfig(): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE}/regenerate`, { method: 'POST' });
     return res.json();
 }

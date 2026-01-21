@@ -18,6 +18,7 @@ import (
 	"github.com/hop/backend/internal/config"
 	"github.com/hop/backend/internal/database"
 	"github.com/hop/backend/internal/logger"
+	"github.com/hop/backend/internal/nginx"
 )
 
 var log = logger.WithTag("ssl")
@@ -146,7 +147,8 @@ func IssueCertificate(domains []string, dnsProviderID string, email string) (*da
 	}
 
 	cfg := config.Get()
-	sslDir := cfg.Nginx.SSLDir
+	paths := nginx.GetNginxPaths()
+	sslDir := paths.SSLDir
 
 	// 确保 SSL 目录存在
 	if err := os.MkdirAll(sslDir, 0755); err != nil {

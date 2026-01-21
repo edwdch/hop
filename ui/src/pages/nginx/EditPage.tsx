@@ -29,6 +29,7 @@ export default function EditPage() {
     const [testing, setTesting] = useState(false);
     const [reloading, setReloading] = useState(false);
     const [currentPath, setCurrentPath] = useState('');
+    const [isReadonly, setIsReadonly] = useState(false);
 
     useEffect(() => {
         loadFile();
@@ -55,6 +56,7 @@ export default function EditPage() {
                 setOriginalContent(result.content);
                 setFileName(result.name);
                 setCurrentPath(result.path);
+                setIsReadonly(result.readonly ?? false);
             }
         } catch (err) {
             toast.error('加载失败', { description: (err as Error).message });
@@ -185,20 +187,26 @@ export default function EditPage() {
                         
                         <div className="w-px h-6 bg-border" />
                         
-                        <Button 
-                            size="sm"
-                            onClick={handleSave}
-                            disabled={saving || !hasChanges}
-                            className="gap-2 font-mono text-xs"
-                        >
-                            {saving ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                                <Save className="h-3.5 w-3.5" />
-                            )}
-                            <span>保存</span>
-                            {hasChanges && <span className="text-primary-foreground/60">*</span>}
-                        </Button>
+                        {isReadonly ? (
+                            <span className="text-xs font-mono text-muted-foreground px-2">
+                                只读（由模板生成）
+                            </span>
+                        ) : (
+                            <Button 
+                                size="sm"
+                                onClick={handleSave}
+                                disabled={saving || !hasChanges}
+                                className="gap-2 font-mono text-xs"
+                            >
+                                {saving ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    <Save className="h-3.5 w-3.5" />
+                                )}
+                                <span>保存</span>
+                                {hasChanges && <span className="text-primary-foreground/60">*</span>}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </header>

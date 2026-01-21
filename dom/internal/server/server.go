@@ -31,6 +31,16 @@ type Server struct {
 func New(cfg *config.Config) *Server {
 	r := chi.NewRouter()
 
+	// 初始化 Nginx 配置目录和文件
+	if err := nginx.InitNginxConfig(); err != nil {
+		log.Info("初始化 Nginx 配置失败", map[string]interface{}{"error": err.Error()})
+	} else {
+		paths := nginx.GetNginxPaths()
+		log.Info("Nginx 配置目录已就绪", map[string]interface{}{
+			"baseDir": paths.BaseDir,
+		})
+	}
+
 	// 中间件
 	r.Use(middleware.RealIP)
 	r.Use(middleware.RequestID)

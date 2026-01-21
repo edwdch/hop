@@ -8,7 +8,6 @@ import {
     ChevronLeft,
     Loader2,
     Cloud,
-    Shield,
     Key
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

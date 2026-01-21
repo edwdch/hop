@@ -13,9 +13,7 @@ import {
     ChevronLeft,
     Loader2,
     Settings,
-    Calendar,
-    Key,
-    Globe
+    Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

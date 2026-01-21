@@ -27,12 +27,15 @@ type AuthConfig struct {
 	Secret string `toml:"secret"`
 }
 
-// NginxConfig Nginx 配置路径
+// NginxConfig Nginx 配置
 type NginxConfig struct {
-	ConfigPath  string `toml:"config_path"`
-	ConfigsDir  string `toml:"configs_dir"`
-	SnippetsDir string `toml:"snippets_dir"`
-	SSLDir      string `toml:"ssl_dir"`
+	// 模板参数
+	WorkerProcesses   string `toml:"worker_processes"`     // auto 或具体数字
+	WorkerConnections int    `toml:"worker_connections"`   // 每个 worker 的最大连接数
+	Keepalive         int    `toml:"keepalive"`            // keepalive 超时秒数
+	ClientMaxBodySize string `toml:"client_max_body_size"` // 客户端最大请求体
+	Gzip              bool   `toml:"gzip"`                 // 是否启用 gzip
+	ServerTokens      bool   `toml:"server_tokens"`        // 是否显示 nginx 版本
 }
 
 // DataConfig 数据目录配置
@@ -53,10 +56,12 @@ func DefaultConfig() *Config {
 			Secret: "hop-default-secret-please-change-me",
 		},
 		Nginx: NginxConfig{
-			ConfigPath:  "/etc/nginx/nginx.conf",
-			ConfigsDir:  "/etc/nginx/conf.d",
-			SnippetsDir: "/etc/nginx/snippets",
-			SSLDir:      "/etc/nginx/ssl",
+			WorkerProcesses:   "auto",
+			WorkerConnections: 1024,
+			Keepalive:         65,
+			ClientMaxBodySize: "100m",
+			Gzip:              true,
+			ServerTokens:      false,
 		},
 		Data: DataConfig{
 			Dir: "./data",
@@ -128,23 +133,30 @@ port = 3000
 secret = "hop-default-secret-please-change-me"
 
 [nginx]
-# Nginx 主配置文件路径
-config_path = "/etc/nginx/nginx.conf"
-# 站点配置目录
-configs_dir = "/etc/nginx/conf.d"
-# 片段配置目录
-snippets_dir = "/etc/nginx/snippets"
-# SSL 证书目录
-ssl_dir = "/etc/nginx/ssl"
+# Nginx 模板参数配置
+# worker 进程数，auto 表示自动检测 CPU 核心数
+worker_processes = "auto"
+# 每个 worker 的最大连接数
+worker_connections = 1024
+# keepalive 超时秒数
+keepalive = 65
+# 客户端最大请求体大小
+client_max_body_size = "100m"
+# 是否启用 gzip 压缩
+gzip = true
+# 是否显示 nginx 版本号（建议关闭以提高安全性）
+server_tokens = false
 
 [data]
 # 数据目录（相对路径基于配置文件位置）
-# 存储数据库、lego 工作目录等
+# 存储数据库、nginx 配置、lego 工作目录等
 dir = "./data"
 
-# SSL 证书自动续期说明：
+# 说明：
+# - Nginx 配置文件会自动生成到 data/nginx/ 目录
+# - 站点配置存储在 data/nginx/conf.d/
+# - SSL 证书存储在 data/nginx/ssl/
 # - 系统会每 24 小时检查一次证书过期时间
 # - 如果证书在 30 天内过期且开启了自动续期，系统会自动续期
-# - 请确保已安装 lego：go install github.com/go-acme/lego/v4/cmd/lego@latest
 `
 }

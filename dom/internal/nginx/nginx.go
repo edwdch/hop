@@ -43,10 +43,13 @@ func Router() chi.Router {
 	r.Get("/browse", handleBrowse)
 	r.Get("/file", handleGetFile)
 	r.Get("/main-config", handleGetMainConfig)
+	r.Get("/template-params", handleGetTemplateParams)
 	r.Post("/file", handleSaveFile)
 	r.Post("/create", handleCreateFile)
 	r.Post("/test", handleTest)
 	r.Post("/reload", handleReload)
+	r.Post("/regenerate", handleRegenerate)
+	r.Post("/template-params", handleSaveTemplateParams)
 	r.Delete("/file", handleDeleteFile)
 
 	return r
@@ -54,23 +57,23 @@ func Router() chi.Router {
 
 // handleGetConfig 获取环境配置
 func handleGetConfig(w http.ResponseWriter, r *http.Request) {
-	cfg := config.Get()
+	paths := GetNginxPaths()
 	jsonResponse(w, map[string]string{
-		"configPath":  cfg.Nginx.ConfigPath,
-		"configsDir":  cfg.Nginx.ConfigsDir,
-		"snippetsDir": cfg.Nginx.SnippetsDir,
-		"sslDir":      cfg.Nginx.SSLDir,
+		"configPath":  paths.ConfigPath,
+		"configsDir":  paths.ConfigsDir,
+		"snippetsDir": paths.SnippetsDir,
+		"sslDir":      paths.SSLDir,
 	})
 }
 
 // handleGetSites 获取网站列表
 func handleGetSites(w http.ResponseWriter, r *http.Request) {
-	cfg := config.Get()
-	files, err := listFiles(cfg.Nginx.ConfigsDir)
+	paths := GetNginxPaths()
+	files, err := listFiles(paths.ConfigsDir)
 	if err != nil {
 		jsonResponse(w, map[string]interface{}{
 			"sites":     []SiteInfo{},
-			"directory": cfg.Nginx.ConfigsDir,
+			"directory": paths.ConfigsDir,
 		})
 		return
 	}
@@ -93,23 +96,23 @@ func handleGetSites(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, map[string]interface{}{
 		"sites":     sites,
-		"directory": cfg.Nginx.ConfigsDir,
+		"directory": paths.ConfigsDir,
 	})
 }
 
 // handleBrowse 浏览目录
 func handleBrowse(w http.ResponseWriter, r *http.Request) {
 	dirType := r.URL.Query().Get("dir")
-	cfg := config.Get()
+	paths := GetNginxPaths()
 
 	var targetDir string
 	switch dirType {
 	case "configs":
-		targetDir = cfg.Nginx.ConfigsDir
+		targetDir = paths.ConfigsDir
 	case "snippets":
-		targetDir = cfg.Nginx.SnippetsDir
+		targetDir = paths.SnippetsDir
 	case "ssl":
-		targetDir = cfg.Nginx.SSLDir
+		targetDir = paths.SSLDir
 	default:
 		jsonError(w, "Invalid directory type", http.StatusBadRequest)
 		return
@@ -149,20 +152,34 @@ func handleGetFile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleGetMainConfig 读取主配置文件
+// handleGetMainConfig 读取主配置文件（只读，由模板生成）
 func handleGetMainConfig(w http.ResponseWriter, r *http.Request) {
-	cfg := config.Get()
+	paths := GetNginxPaths()
 
-	content, err := os.ReadFile(cfg.Nginx.ConfigPath)
+	content, err := os.ReadFile(paths.ConfigPath)
 	if err != nil {
-		jsonError(w, "Failed to read main config: "+err.Error(), http.StatusInternalServerError)
-		return
+		// 如果文件不存在，尝试初始化
+		if os.IsNotExist(err) {
+			if initErr := InitNginxConfig(); initErr != nil {
+				jsonError(w, "Failed to initialize nginx config: "+initErr.Error(), http.StatusInternalServerError)
+				return
+			}
+			content, err = os.ReadFile(paths.ConfigPath)
+			if err != nil {
+				jsonError(w, "Failed to read main config: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			jsonError(w, "Failed to read main config: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	jsonResponse(w, map[string]interface{}{
-		"content": string(content),
-		"path":    cfg.Nginx.ConfigPath,
-		"name":    filepath.Base(cfg.Nginx.ConfigPath),
+		"content":  string(content),
+		"path":     paths.ConfigPath,
+		"name":     filepath.Base(paths.ConfigPath),
+		"readonly": true, // 标记为只读
 	})
 }
 
@@ -205,13 +222,13 @@ func handleCreateFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := config.Get()
+	paths := GetNginxPaths()
 	var targetDir string
 	switch req.Dir {
 	case "configs":
-		targetDir = cfg.Nginx.ConfigsDir
+		targetDir = paths.ConfigsDir
 	case "snippets":
-		targetDir = cfg.Nginx.SnippetsDir
+		targetDir = paths.SnippetsDir
 	default:
 		jsonError(w, "Invalid directory type", http.StatusBadRequest)
 		return
@@ -275,10 +292,10 @@ func handleReload(w http.ResponseWriter, r *http.Request) {
 // handleDeleteFile 删除文件
 func handleDeleteFile(w http.ResponseWriter, r *http.Request) {
 	filePath := r.URL.Query().Get("path")
-	cfg := config.Get()
+	paths := GetNginxPaths()
 
 	// 安全检查：只允许删除 configs 和 snippets 目录下的文件
-	allowedDirs := []string{cfg.Nginx.ConfigsDir, cfg.Nginx.SnippetsDir}
+	allowedDirs := []string{paths.ConfigsDir, paths.SnippetsDir}
 	normalizedPath := filepath.Clean(filePath)
 
 	allowed := false
@@ -295,7 +312,7 @@ func handleDeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 不允许删除主配置文件
-	if normalizedPath == cfg.Nginx.ConfigPath {
+	if normalizedPath == paths.ConfigPath {
 		jsonError(w, "Cannot delete main configuration file", http.StatusForbidden)
 		return
 	}
@@ -397,12 +414,12 @@ func listFiles(dirPath string) ([]FileInfo, error) {
 
 // isPathAllowed 检查路径是否允许访问
 func isPathAllowed(filePath string) bool {
-	cfg := config.Get()
-	allowedDirs := []string{cfg.Nginx.ConfigsDir, cfg.Nginx.SnippetsDir, cfg.Nginx.SSLDir}
+	paths := GetNginxPaths()
+	allowedDirs := []string{paths.ConfigsDir, paths.SnippetsDir, paths.SSLDir}
 	normalizedPath := filepath.Clean(filePath)
 
-	// 检查是否是主配置文件
-	if normalizedPath == cfg.Nginx.ConfigPath {
+	// 检查是否是主配置文件（只读）
+	if normalizedPath == paths.ConfigPath {
 		return true
 	}
 
@@ -443,4 +460,56 @@ func jsonError(w http.ResponseWriter, message string, status int) {
 func drainBody(r *http.Request) {
 	io.Copy(io.Discard, r.Body)
 	r.Body.Close()
+}
+
+// handleGetTemplateParams 获取当前模板参数
+func handleGetTemplateParams(w http.ResponseWriter, r *http.Request) {
+	cfg := config.Get()
+	jsonResponse(w, TemplateParams{
+		WorkerProcesses:   cfg.Nginx.WorkerProcesses,
+		WorkerConnections: cfg.Nginx.WorkerConnections,
+		Keepalive:         cfg.Nginx.Keepalive,
+		ClientMaxBodySize: cfg.Nginx.ClientMaxBodySize,
+		Gzip:              cfg.Nginx.Gzip,
+		ServerTokens:      cfg.Nginx.ServerTokens,
+	})
+}
+
+// handleSaveTemplateParams 保存模板参数并重新生成配置
+func handleSaveTemplateParams(w http.ResponseWriter, r *http.Request) {
+	var params TemplateParams
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		jsonError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// 生成并保存新的 nginx.conf
+	if err := GenerateAndSaveNginxConf(params); err != nil {
+		jsonError(w, "Failed to generate config: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("模板参数已更新，nginx.conf 已重新生成", nil)
+	jsonResponse(w, map[string]bool{"success": true})
+}
+
+// handleRegenerate 使用当前参数重新生成 nginx.conf
+func handleRegenerate(w http.ResponseWriter, r *http.Request) {
+	cfg := config.Get()
+	params := TemplateParams{
+		WorkerProcesses:   cfg.Nginx.WorkerProcesses,
+		WorkerConnections: cfg.Nginx.WorkerConnections,
+		Keepalive:         cfg.Nginx.Keepalive,
+		ClientMaxBodySize: cfg.Nginx.ClientMaxBodySize,
+		Gzip:              cfg.Nginx.Gzip,
+		ServerTokens:      cfg.Nginx.ServerTokens,
+	}
+
+	if err := GenerateAndSaveNginxConf(params); err != nil {
+		jsonError(w, "Failed to regenerate config: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("nginx.conf 已重新生成", nil)
+	jsonResponse(w, map[string]bool{"success": true})
 }

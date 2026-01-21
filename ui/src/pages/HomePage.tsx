@@ -101,7 +101,7 @@ export default function HomePage() {
     const loadSites = async () => {
         try {
             const result = await getSites();
-            setSites(result.sites);
+            setSites(result.sites ?? []);
         } catch (err) {
             console.error('Failed to load sites:', err);
         } finally {
