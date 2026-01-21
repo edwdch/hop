@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { readdir, readFile, writeFile, stat } from 'fs/promises';
+import { readdir, readFile, writeFile, stat, access, unlink } from 'fs/promises';
 import { join, basename } from 'path';
 import { spawn } from 'child_process';
 
@@ -252,4 +252,90 @@ export const nginxPlugin = new Elysia({ prefix: '/api/nginx' })
             output: result.output || 'Nginx reloaded successfully',
             error: result.error,
         };
+    })
+
+    // 创建新文件
+    .post('/create', async ({ body }) => {
+        const { dir, name, content } = body;
+        
+        // 验证目录类型
+        let targetDir: string;
+        switch (dir) {
+            case 'configs':
+                targetDir = NGINX_CONFIGS_DIR;
+                break;
+            case 'snippets':
+                targetDir = NGINX_SNIPPETS_DIR;
+                break;
+            default:
+                return { success: false, error: 'Invalid directory type' };
+        }
+
+        // 验证文件名
+        if (!name || name.includes('/') || name.includes('..')) {
+            return { success: false, error: 'Invalid file name' };
+        }
+
+        // 确保文件名有正确的扩展名
+        const fileName = name.endsWith('.conf') ? name : `${name}.conf`;
+        const filePath = join(targetDir, fileName);
+
+        // 检查文件是否已存在
+        try {
+            await access(filePath);
+            return { success: false, error: 'File already exists' };
+        } catch {
+            // 文件不存在，可以创建
+        }
+
+        try {
+            await writeFile(filePath, content || '', 'utf-8');
+            return { success: true, path: filePath, name: fileName };
+        } catch (err) {
+            return { success: false, error: `Failed to create file: ${(err as Error).message}` };
+        }
+    }, {
+        body: t.Object({
+            dir: t.String(),
+            name: t.String(),
+            content: t.Optional(t.String()),
+        }),
+    })
+
+    // 删除文件
+    .delete('/file', async ({ query }) => {
+        const { path: filePath } = query;
+
+        // 安全检查：只允许删除 configs 和 snippets 目录下的文件
+        const allowedDirs = [NGINX_CONFIGS_DIR, NGINX_SNIPPETS_DIR];
+        const normalizedPath = join(filePath);
+        
+        const isAllowed = allowedDirs.some(dir => normalizedPath.startsWith(dir));
+        if (!isAllowed) {
+            return { success: false, error: 'Access denied: Cannot delete files outside configs/snippets directories' };
+        }
+
+        // 不允许删除主配置文件
+        if (normalizedPath === NGINX_CONFIG_PATH) {
+            return { success: false, error: 'Cannot delete main configuration file' };
+        }
+
+        try {
+            // 检查文件是否存在
+            await access(filePath);
+            
+            // 删除文件
+            await unlink(filePath);
+            return { success: true };
+        } catch (err) {
+            const error = err as NodeJS.ErrnoException;
+            if (error.code === 'ENOENT') {
+                return { success: false, error: 'File not found' };
+            }
+            return { success: false, error: `Failed to delete file: ${error.message}` };
+        }
+    }, {
+        query: t.Object({
+            path: t.String(),
+        }),
     });

@@ -85,3 +85,25 @@ export async function reloadNginx(): Promise<CommandResult> {
     const res = await fetch(`${API_BASE}/reload`, { method: 'POST' });
     return res.json();
 }
+
+// 创建新文件
+export async function createFile(
+    dir: 'configs' | 'snippets',
+    name: string,
+    content?: string
+): Promise<{ success: boolean; path?: string; name?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dir, name, content }),
+    });
+    return res.json();
+}
+
+// 删除文件
+export async function deleteFile(path: string): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}

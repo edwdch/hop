@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { 
     ArrowLeft, 
     Loader2,
@@ -9,10 +10,39 @@ import {
     Shield,
     FolderOpen,
     ChevronRight,
-    Terminal
+    Terminal,
+    Plus,
+    Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { browseDirectory, type FileInfo } from '@/api/nginx';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { browseDirectory, createFile, deleteFile, type FileInfo } from '@/api/nginx';
+
+// 默认片段模板
+const DEFAULT_SNIPPET_TEMPLATE = `# Snippet configuration
+# Include this file in your server block with:
+# include snippets/<filename>.conf;
+
+`;
 
 const dirConfig = {
     configs: {
@@ -20,18 +50,21 @@ const dirConfig = {
         description: 'conf.d 目录',
         icon: FolderOpen,
         iconColor: 'text-primary',
+        canCreate: false,
     },
     snippets: {
         title: '代码片段',
         description: 'snippets 目录',
         icon: FileCode,
         iconColor: 'text-accent',
+        canCreate: true,
     },
     ssl: {
         title: 'SSL 证书',
         description: 'ssl 目录',
         icon: Shield,
         iconColor: 'text-chart-3',
+        canCreate: false,
     },
 };
 
@@ -43,6 +76,16 @@ export default function BrowsePage() {
     const [files, setFiles] = useState<FileInfo[]>([]);
     const [directory, setDirectory] = useState('');
     const [loading, setLoading] = useState(true);
+    
+    // 创建片段弹窗状态
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [newFileName, setNewFileName] = useState('');
+    const [creating, setCreating] = useState(false);
+    
+    // 删除文件弹窗状态
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [fileToDelete, setFileToDelete] = useState<FileInfo | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const config = dirConfig[dirType] || dirConfig.configs;
     const IconComponent = config.icon;
@@ -97,6 +140,59 @@ export default function BrowsePage() {
         }
     };
 
+    const handleCreateFile = async () => {
+        if (!newFileName.trim()) {
+            toast.error('请输入文件名');
+            return;
+        }
+
+        setCreating(true);
+        try {
+            const result = await createFile('snippets', newFileName.trim(), DEFAULT_SNIPPET_TEMPLATE);
+            if (result.success && result.path) {
+                toast.success('片段创建成功');
+                setCreateDialogOpen(false);
+                setNewFileName('');
+                // 跳转到编辑页面
+                navigate(`/nginx/edit?path=${encodeURIComponent(result.path)}`);
+            } else {
+                toast.error('创建失败', { description: result.error });
+            }
+        } catch (err) {
+            toast.error('创建失败', { description: (err as Error).message });
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleDeleteClick = (e: React.MouseEvent, file: FileInfo) => {
+        e.stopPropagation(); // 防止触发行点击
+        setFileToDelete(file);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!fileToDelete) return;
+
+        setDeleting(true);
+        try {
+            const result = await deleteFile(fileToDelete.path);
+            if (result.success) {
+                toast.success('文件已删除');
+                setDeleteDialogOpen(false);
+                setFileToDelete(null);
+                // 重新加载目录
+                loadDirectory();
+            } else {
+                toast.error('删除失败', { description: result.error });
+            }
+        } catch (err) {
+            toast.error('删除失败', { description: (err as Error).message });
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     const getFileIcon = (file: FileInfo) => {
         if (file.type === 'directory') {
             return <Folder className="h-4 w-4 text-primary" />;
@@ -140,8 +236,20 @@ export default function BrowsePage() {
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-                        <span>{files.length} 个文件</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-muted-foreground hidden sm:block">
+                            {files.length} 个文件
+                        </span>
+                        {config.canCreate && (
+                            <Button 
+                                size="sm" 
+                                onClick={() => setCreateDialogOpen(true)}
+                                className="gap-2 font-mono text-xs"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">新建片段</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
             </header>
@@ -151,10 +259,11 @@ export default function BrowsePage() {
                 <div className="max-w-4xl mx-auto">
                     <div className="bg-card border animate-fade-up opacity-0 stagger-2">
                         {/* Table header */}
-                        <div className="grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-3 border-b bg-muted/30 text-xs font-mono uppercase text-muted-foreground">
+                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 border-b bg-muted/30 text-xs font-mono uppercase text-muted-foreground">
                             <span>文件名</span>
                             <span className="w-20 text-right hidden sm:block">大小</span>
                             <span className="w-32 text-right hidden md:block">修改时间</span>
+                            <span className="w-16"></span>
                         </div>
                         
                         {/* File list */}
@@ -170,13 +279,24 @@ export default function BrowsePage() {
                                 <div className="text-center py-16">
                                     <Folder className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
                                     <p className="text-muted-foreground font-mono text-sm">目录为空</p>
-                                    <p className="text-xs text-muted-foreground/60 mt-1">暂无文件</p>
+                                    <p className="text-xs text-muted-foreground/60 mt-1 mb-4">暂无文件</p>
+                                    {config.canCreate && (
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => setCreateDialogOpen(true)}
+                                            className="gap-2"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            新建片段
+                                        </Button>
+                                    )}
                                 </div>
                             ) : (
                                 files.map((file, index) => (
                                     <div
                                         key={file.path}
-                                        className={`grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-3 items-center transition-all cursor-pointer industrial-hover animate-fade-up opacity-0 stagger-${Math.min(index + 3, 8)}`}
+                                        className={`group grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 items-center transition-all cursor-pointer industrial-hover animate-fade-up opacity-0 stagger-${Math.min(index + 3, 8)}`}
                                         onClick={() => handleFileClick(file)}
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
@@ -197,6 +317,18 @@ export default function BrowsePage() {
                                             <span className="text-xs font-mono text-muted-foreground">
                                                 {formatDate(file.modifiedAt)}
                                             </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {file.type === 'file' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    onClick={(e) => handleDeleteClick(e, file)}
+                                                    className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                             {file.type === 'file' && (
                                                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
                                             )}
@@ -219,6 +351,99 @@ export default function BrowsePage() {
                     <span>点击文件进行编辑</span>
                 </div>
             </footer>
+
+            {/* Create Snippet Dialog */}
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileCode className="h-5 w-5 text-accent" />
+                            新建代码片段
+                        </DialogTitle>
+                        <DialogDescription className="font-mono">
+                            在 snippets 目录创建新的配置片段
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="file-name" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                                文件名
+                            </Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    id="file-name"
+                                    value={newFileName}
+                                    onChange={(e) => setNewFileName(e.target.value)}
+                                    placeholder="ssl-params"
+                                    className="flex-1"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleCreateFile();
+                                        }
+                                    }}
+                                />
+                                <span className="text-sm text-muted-foreground font-mono">.conf</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                片段可通过 include snippets/filename.conf; 引用
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setCreateDialogOpen(false)}
+                            disabled={creating}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            onClick={handleCreateFile}
+                            disabled={creating || !newFileName.trim()}
+                            className="gap-2"
+                        >
+                            {creating ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Plus className="h-4 w-4" />
+                            )}
+                            创建
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete File AlertDialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>确认删除文件</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                            <span>确定要删除以下文件吗？此操作无法撤销。</span>
+                            {fileToDelete && (
+                                <code className="block mt-2 p-2 bg-muted text-sm font-mono rounded">
+                                    {fileToDelete.path}
+                                </code>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteConfirm}
+                            disabled={deleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {deleting ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                            )}
+                            删除
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

@@ -19,7 +19,6 @@ const app = new Elysia()
         const url = new URL(request.url);
         logger.info({ method: request.method, path: url.pathname, status: set.status || 200 }, 'response sent');
     })
-    .get("/api/ping", () => ({ pong: true }))
     .use(nginxPlugin)
     // 3. 检查是否需要初始化
     .get('/api/auth/need-init', async () => {
