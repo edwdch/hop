@@ -3,6 +3,35 @@ import { cors } from '@elysiajs/cors';
 import { auth, hasUsers } from './auth';
 import { logger } from './lib/logger';
 import { nginxPlugin } from './nginx';
+import { resolve, dirname, join } from 'path';
+import { existsSync } from 'fs';
+
+// 获取项目根目录 (dom/)
+const ROOT_DIR = resolve(dirname(import.meta.dir));
+const DIST_DIR = resolve(ROOT_DIR, 'dist');
+
+// MIME 类型映射
+const MIME_TYPES: Record<string, string> = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.eot': 'application/vnd.ms-fontobject',
+};
+
+function getMimeType(path: string): string {
+    const ext = path.substring(path.lastIndexOf('.'));
+    return MIME_TYPES[ext] || 'application/octet-stream';
+}
 
 const app = new Elysia()
     .use(cors({
@@ -39,6 +68,41 @@ const app = new Elysia()
                 headers: response.headers
             });
         }
+    })
+    // SPA fallback 和静态文件服务
+    .get('/*', async ({ request, set }) => {
+        const url = new URL(request.url);
+        const pathname = url.pathname;
+        
+        // 跳过 API 请求
+        if (pathname.startsWith('/api/')) {
+            return;
+        }
+        
+        // 尝试作为静态文件提供
+        let filePath = join(DIST_DIR, pathname);
+        
+        // 如果路径不包含扩展名，尝试作为 SPA 路由处理
+        if (!pathname.includes('.')) {
+            filePath = join(DIST_DIR, 'index.html');
+        }
+        
+        // 检查文件是否存在
+        if (existsSync(filePath)) {
+            const file = Bun.file(filePath);
+            set.headers['content-type'] = getMimeType(filePath);
+            return file;
+        }
+        
+        // 文件不存在，返回 index.html (SPA fallback)
+        const indexPath = join(DIST_DIR, 'index.html');
+        if (existsSync(indexPath)) {
+            set.headers['content-type'] = 'text/html';
+            return Bun.file(indexPath);
+        }
+        
+        set.status = 404;
+        return 'Not Found';
     })
     .listen({
         port: 3000,
