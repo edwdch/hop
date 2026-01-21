@@ -40,8 +40,6 @@ type NginxPaths struct {
 	ConfigPath string
 	// 站点配置目录
 	ConfigsDir string
-	// 片段配置目录
-	SnippetsDir string
 	// SSL 证书目录
 	SSLDir string
 }
@@ -52,11 +50,10 @@ func GetNginxPaths() NginxPaths {
 	baseDir := filepath.Join(cfg.Data.Dir, "nginx")
 
 	return NginxPaths{
-		BaseDir:     baseDir,
-		ConfigPath:  filepath.Join(baseDir, "nginx.conf"),
-		ConfigsDir:  filepath.Join(baseDir, "conf.d"),
-		SnippetsDir: filepath.Join(baseDir, "snippets"),
-		SSLDir:      filepath.Join(baseDir, "ssl"),
+		BaseDir:    baseDir,
+		ConfigPath: filepath.Join(baseDir, "nginx.conf"),
+		ConfigsDir: filepath.Join(baseDir, "conf.d"),
+		SSLDir:     filepath.Join(baseDir, "ssl"),
 	}
 }
 
@@ -66,7 +63,6 @@ func EnsureNginxDirs() error {
 	dirs := []string{
 		paths.BaseDir,
 		paths.ConfigsDir,
-		paths.SnippetsDir,
 		paths.SSLDir,
 	}
 

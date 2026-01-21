@@ -2,85 +2,54 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
-    Save, 
     ArrowLeft, 
     CheckCircle2, 
     Loader2,
     RefreshCw,
     FileText,
-    Terminal,
-    AlertTriangle
+    Terminal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NginxEditor } from '@/components/editor/NginxEditor';
-import { readFile, readMainConfig, saveFile, testNginxConfig, reloadNginx } from '@/api/nginx';
+import { readMainConfig, testNginxConfig, reloadNginx } from '@/api/nginx';
 
 export default function EditPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const filePath = searchParams.get('path');
     const isMainConfig = searchParams.get('type') === 'main';
 
     const [content, setContent] = useState('');
-    const [originalContent, setOriginalContent] = useState('');
     const [fileName, setFileName] = useState('');
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
     const [reloading, setReloading] = useState(false);
     const [currentPath, setCurrentPath] = useState('');
-    const [isReadonly, setIsReadonly] = useState(false);
 
     useEffect(() => {
+        if (!isMainConfig) {
+            // 如果不是主配置，重定向回首页
+            navigate('/');
+            return;
+        }
         loadFile();
-    }, [filePath, isMainConfig]);
+    }, [isMainConfig, navigate]);
 
     const loadFile = async () => {
         setLoading(true);
         try {
-            let result;
-            if (isMainConfig) {
-                result = await readMainConfig();
-            } else if (filePath) {
-                result = await readFile(filePath);
-            } else {
-                toast.error('未指定文件路径');
-                setLoading(false);
-                return;
-            }
+            const result = await readMainConfig();
 
             if (result.error) {
                 toast.error('加载失败', { description: result.error });
             } else if (result.content !== null) {
                 setContent(result.content);
-                setOriginalContent(result.content);
                 setFileName(result.name);
                 setCurrentPath(result.path);
-                setIsReadonly(result.readonly ?? false);
             }
         } catch (err) {
             toast.error('加载失败', { description: (err as Error).message });
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleSave = async () => {
-        if (!currentPath) return;
-        
-        setSaving(true);
-        try {
-            const result = await saveFile(currentPath, content);
-            if (result.success) {
-                setOriginalContent(content);
-                toast.success('文件已保存');
-            } else {
-                toast.error('保存失败', { description: result.error });
-            }
-        } catch (err) {
-            toast.error('保存失败', { description: (err as Error).message });
-        } finally {
-            setSaving(false);
         }
     };
 
@@ -116,8 +85,6 @@ export default function EditPage() {
         }
     };
 
-    const hasChanges = content !== originalContent;
-
     return (
         <div className="min-h-screen flex flex-col bg-background">
             {/* Header */}
@@ -142,11 +109,8 @@ export default function EditPage() {
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                     <h1 className="font-mono text-sm font-medium truncate">
-                                        {fileName || '配置文件'}
+                                        {fileName || '主配置'}
                                     </h1>
-                                    {hasChanges && (
-                                        <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                                    )}
                                 </div>
                                 <p className="text-xs text-muted-foreground font-mono truncate max-w-[200px] lg:max-w-md">
                                     {currentPath}
@@ -187,26 +151,9 @@ export default function EditPage() {
                         
                         <div className="w-px h-6 bg-border" />
                         
-                        {isReadonly ? (
-                            <span className="text-xs font-mono text-muted-foreground px-2">
-                                只读（由模板生成）
-                            </span>
-                        ) : (
-                            <Button 
-                                size="sm"
-                                onClick={handleSave}
-                                disabled={saving || !hasChanges}
-                                className="gap-2 font-mono text-xs"
-                            >
-                                {saving ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                    <Save className="h-3.5 w-3.5" />
-                                )}
-                                <span>保存</span>
-                                {hasChanges && <span className="text-primary-foreground/60">*</span>}
-                            </Button>
-                        )}
+                        <span className="text-xs font-mono text-muted-foreground px-2">
+                            只读（由模板生成）
+                        </span>
                     </div>
                 </div>
             </header>
@@ -231,12 +178,6 @@ export default function EditPage() {
                                     <span>NGINX CONFIG</span>
                                 </div>
                                 <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
-                                    {hasChanges && (
-                                        <div className="flex items-center gap-1.5 text-accent">
-                                            <AlertTriangle className="h-3 w-3" />
-                                            <span>未保存的更改</span>
-                                        </div>
-                                    )}
                                     <span>{content.split('\n').length} 行</span>
                                 </div>
                             </div>
@@ -245,7 +186,7 @@ export default function EditPage() {
                             <div className="h-[calc(100%-40px)]">
                                 <NginxEditor
                                     value={content}
-                                    onChange={setContent}
+                                    onChange={() => {}} // 只读模式
                                     height="100%"
                                 />
                             </div>
@@ -259,8 +200,8 @@ export default function EditPage() {
                 <div className="flex items-center justify-between text-xs text-muted-foreground font-mono px-2">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <div className={`status-dot ${hasChanges ? 'status-dot-warning' : 'status-dot-online'}`} />
-                            <span>{hasChanges ? '有未保存的更改' : '已同步'}</span>
+                            <div className="status-dot status-dot-online" />
+                            <span>只读模式</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">

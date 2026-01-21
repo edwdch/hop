@@ -7,6 +7,7 @@ import LoginPage from '@/pages/LoginPage';
 import HomePage from '@/pages/HomePage';
 import NginxEditPage from '@/pages/nginx/EditPage';
 import NginxBrowsePage from '@/pages/nginx/BrowsePage';
+import ProxyEditPage from '@/pages/nginx/ProxyEditPage';
 import SSLPage from '@/pages/ssl/SSLPage';
 import DNSProvidersPage from '@/pages/ssl/DNSProvidersPage';
 
@@ -92,6 +93,15 @@ function App() {
           element={
             <ProtectedRoute>
               <NginxBrowsePage />
+            </ProtectedRoute>
+          }
+        />
+        {/* 代理站点编辑 - 需要登录 */}
+        <Route
+          path="/nginx/proxy"
+          element={
+            <ProtectedRoute>
+              <ProxyEditPage />
             </ProtectedRoute>
           }
         />

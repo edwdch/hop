@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
 import { 
     ArrowLeft, 
     Loader2,
@@ -11,20 +10,9 @@ import {
     FolderOpen,
     ChevronRight,
     Terminal,
-    Plus,
     Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -35,14 +23,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { browseDirectory, createFile, deleteFile, type FileInfo } from '@/api/nginx';
-
-// 默认片段模板
-const DEFAULT_SNIPPET_TEMPLATE = `# Snippet configuration
-# Include this file in your server block with:
-# include snippets/<filename>.conf;
-
-`;
+import { browseDirectory, deleteFile, type FileInfo } from '@/api/nginx';
+import { toast } from 'sonner';
 
 const dirConfig = {
     configs: {
@@ -50,37 +32,23 @@ const dirConfig = {
         description: 'conf.d 目录',
         icon: FolderOpen,
         iconColor: 'text-primary',
-        canCreate: false,
-    },
-    snippets: {
-        title: '代码片段',
-        description: 'snippets 目录',
-        icon: FileCode,
-        iconColor: 'text-accent',
-        canCreate: true,
     },
     ssl: {
         title: 'SSL 证书',
         description: 'ssl 目录',
         icon: Shield,
         iconColor: 'text-chart-3',
-        canCreate: false,
     },
 };
 
 export default function BrowsePage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const dirType = searchParams.get('dir') as 'configs' | 'snippets' | 'ssl';
+    const dirType = searchParams.get('dir') as 'configs' | 'ssl';
 
     const [files, setFiles] = useState<FileInfo[]>([]);
     const [directory, setDirectory] = useState('');
     const [loading, setLoading] = useState(true);
-    
-    // 创建片段弹窗状态
-    const [createDialogOpen, setCreateDialogOpen] = useState(false);
-    const [newFileName, setNewFileName] = useState('');
-    const [creating, setCreating] = useState(false);
     
     // 删除文件弹窗状态
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -137,31 +105,6 @@ export default function BrowsePage() {
             if (isEditable) {
                 navigate(`/nginx/edit?path=${encodeURIComponent(file.path)}`);
             }
-        }
-    };
-
-    const handleCreateFile = async () => {
-        if (!newFileName.trim()) {
-            toast.error('请输入文件名');
-            return;
-        }
-
-        setCreating(true);
-        try {
-            const result = await createFile('snippets', newFileName.trim(), DEFAULT_SNIPPET_TEMPLATE);
-            if (result.success && result.path) {
-                toast.success('片段创建成功');
-                setCreateDialogOpen(false);
-                setNewFileName('');
-                // 跳转到编辑页面
-                navigate(`/nginx/edit?path=${encodeURIComponent(result.path)}`);
-            } else {
-                toast.error('创建失败', { description: result.error });
-            }
-        } catch (err) {
-            toast.error('创建失败', { description: (err as Error).message });
-        } finally {
-            setCreating(false);
         }
     };
 
@@ -240,16 +183,6 @@ export default function BrowsePage() {
                         <span className="text-xs font-mono text-muted-foreground hidden sm:block">
                             {files.length} 个文件
                         </span>
-                        {config.canCreate && (
-                            <Button 
-                                size="sm" 
-                                onClick={() => setCreateDialogOpen(true)}
-                                className="gap-2 font-mono text-xs"
-                            >
-                                <Plus className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">新建片段</span>
-                            </Button>
-                        )}
                     </div>
                 </div>
             </header>
@@ -280,17 +213,6 @@ export default function BrowsePage() {
                                     <Folder className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
                                     <p className="text-muted-foreground font-mono text-sm">目录为空</p>
                                     <p className="text-xs text-muted-foreground/60 mt-1 mb-4">暂无文件</p>
-                                    {config.canCreate && (
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            onClick={() => setCreateDialogOpen(true)}
-                                            className="gap-2"
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            新建片段
-                                        </Button>
-                                    )}
                                 </div>
                             ) : (
                                 files.map((file, index) => (
@@ -351,67 +273,6 @@ export default function BrowsePage() {
                     <span>点击文件进行编辑</span>
                 </div>
             </footer>
-
-            {/* Create Snippet Dialog */}
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <FileCode className="h-5 w-5 text-accent" />
-                            新建代码片段
-                        </DialogTitle>
-                        <DialogDescription className="font-mono">
-                            在 snippets 目录创建新的配置片段
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="file-name" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                                文件名
-                            </Label>
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    id="file-name"
-                                    value={newFileName}
-                                    onChange={(e) => setNewFileName(e.target.value)}
-                                    placeholder="ssl-params"
-                                    className="flex-1"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleCreateFile();
-                                        }
-                                    }}
-                                />
-                                <span className="text-sm text-muted-foreground font-mono">.conf</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                片段可通过 include snippets/filename.conf; 引用
-                            </p>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setCreateDialogOpen(false)}
-                            disabled={creating}
-                        >
-                            取消
-                        </Button>
-                        <Button
-                            onClick={handleCreateFile}
-                            disabled={creating || !newFileName.trim()}
-                            className="gap-2"
-                        >
-                            {creating ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Plus className="h-4 w-4" />
-                            )}
-                            创建
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
 
             {/* Delete File AlertDialog */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -52,6 +52,13 @@ func Router() chi.Router {
 	r.Post("/template-params", handleSaveTemplateParams)
 	r.Delete("/file", handleDeleteFile)
 
+	// 代理站点管理 API
+	r.Get("/proxy/list", handleListProxySites)
+	r.Get("/proxy/get", handleGetProxySite)
+	r.Post("/proxy/save", handleSaveProxySite)
+	r.Post("/proxy/preview", handlePreviewProxySite)
+	r.Delete("/proxy/delete", handleDeleteProxySite)
+
 	return r
 }
 
@@ -59,10 +66,9 @@ func Router() chi.Router {
 func handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	paths := GetNginxPaths()
 	jsonResponse(w, map[string]string{
-		"configPath":  paths.ConfigPath,
-		"configsDir":  paths.ConfigsDir,
-		"snippetsDir": paths.SnippetsDir,
-		"sslDir":      paths.SSLDir,
+		"configPath": paths.ConfigPath,
+		"configsDir": paths.ConfigsDir,
+		"sslDir":     paths.SSLDir,
 	})
 }
 
@@ -109,8 +115,6 @@ func handleBrowse(w http.ResponseWriter, r *http.Request) {
 	switch dirType {
 	case "configs":
 		targetDir = paths.ConfigsDir
-	case "snippets":
-		targetDir = paths.SnippetsDir
 	case "ssl":
 		targetDir = paths.SSLDir
 	default:
@@ -227,8 +231,6 @@ func handleCreateFile(w http.ResponseWriter, r *http.Request) {
 	switch req.Dir {
 	case "configs":
 		targetDir = paths.ConfigsDir
-	case "snippets":
-		targetDir = paths.SnippetsDir
 	default:
 		jsonError(w, "Invalid directory type", http.StatusBadRequest)
 		return
@@ -294,20 +296,11 @@ func handleDeleteFile(w http.ResponseWriter, r *http.Request) {
 	filePath := r.URL.Query().Get("path")
 	paths := GetNginxPaths()
 
-	// 安全检查：只允许删除 configs 和 snippets 目录下的文件
-	allowedDirs := []string{paths.ConfigsDir, paths.SnippetsDir}
+	// 安全检查：只允许删除 configs 目录下的文件
 	normalizedPath := filepath.Clean(filePath)
 
-	allowed := false
-	for _, dir := range allowedDirs {
-		if strings.HasPrefix(normalizedPath, dir) {
-			allowed = true
-			break
-		}
-	}
-
-	if !allowed {
-		jsonError(w, "Access denied: Cannot delete files outside configs/snippets directories", http.StatusForbidden)
+	if !strings.HasPrefix(normalizedPath, paths.ConfigsDir) {
+		jsonError(w, "Access denied: Cannot delete files outside configs directory", http.StatusForbidden)
 		return
 	}
 
@@ -415,7 +408,7 @@ func listFiles(dirPath string) ([]FileInfo, error) {
 // isPathAllowed 检查路径是否允许访问
 func isPathAllowed(filePath string) bool {
 	paths := GetNginxPaths()
-	allowedDirs := []string{paths.ConfigsDir, paths.SnippetsDir, paths.SSLDir}
+	allowedDirs := []string{paths.ConfigsDir, paths.SSLDir}
 	normalizedPath := filepath.Clean(filePath)
 
 	// 检查是否是主配置文件（只读）
