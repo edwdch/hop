@@ -5,7 +5,6 @@ import { checkNeedInit, useSession } from '@/api/auth';
 import InitPage from '@/pages/InitPage';
 import LoginPage from '@/pages/LoginPage';
 import HomePage from '@/pages/HomePage';
-import NginxSitesPage from '@/pages/nginx/SitesPage';
 import NginxEditPage from '@/pages/nginx/EditPage';
 import NginxBrowsePage from '@/pages/nginx/BrowsePage';
 
@@ -77,15 +76,7 @@ function App() {
             )
           }
         />
-        {/* Nginx 配置管理 - 需要登录 */}
-        <Route
-          path="/nginx"
-          element={
-            <ProtectedRoute>
-              <NginxSitesPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Nginx 配置编辑 - 需要登录 */}
         <Route
           path="/nginx/edit"
           element={

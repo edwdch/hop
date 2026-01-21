@@ -84,7 +84,18 @@ export function NginxEditor({ value, onChange, readOnly = false, height = '500px
         // 检查是否是深色模式
         const isDark = document.documentElement.classList.contains('dark');
 
+        // 创建编辑器高度主题
+        const editorTheme = EditorView.theme({
+            '&': {
+                height: '100%',
+            },
+            '.cm-scroller': {
+                overflow: 'auto',
+            },
+        });
+
         const extensions = [
+            editorTheme,
             lineNumbers(),
             highlightActiveLineGutter(),
             highlightSpecialChars(),
@@ -114,7 +125,6 @@ export function NginxEditor({ value, onChange, readOnly = false, height = '500px
             ]),
             nginxLanguage,
             EditorView.updateListener.of(handleChange),
-            EditorView.lineWrapping,
             EditorState.readOnly.of(readOnly),
         ];
 
@@ -160,7 +170,7 @@ export function NginxEditor({ value, onChange, readOnly = false, height = '500px
     return (
         <div
             ref={editorRef}
-            className="border rounded-md overflow-hidden"
+            className="border rounded-md"
             style={{ height }}
         />
     );

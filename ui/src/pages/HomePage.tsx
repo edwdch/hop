@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { 
     Rocket, 
     User, 
@@ -11,19 +12,22 @@ import {
     Shield,
     File,
     ChevronRight,
-    Server
+    CheckCircle2,
+    RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useSession, logout } from '@/api/auth';
-import { getSites, type FileInfo } from '@/api/nginx';
+import { getSites, testNginxConfig, reloadNginx, type SiteInfo } from '@/api/nginx';
 
 export default function HomePage() {
     const navigate = useNavigate();
     const { data: session, isPending } = useSession();
-    const [sites, setSites] = useState<FileInfo[]>([]);
+    const [sites, setSites] = useState<SiteInfo[]>([]);
     const [loadingSites, setLoadingSites] = useState(true);
+    const [testing, setTesting] = useState(false);
+    const [reloading, setReloading] = useState(false);
 
     useEffect(() => {
         loadSites();
@@ -32,7 +36,7 @@ export default function HomePage() {
     const loadSites = async () => {
         try {
             const result = await getSites();
-            setSites(result.sites.slice(0, 5)); // 只显示前5个
+            setSites(result.sites);
         } catch (err) {
             console.error('Failed to load sites:', err);
         } finally {
@@ -43,6 +47,48 @@ export default function HomePage() {
     const handleLogout = async () => {
         await logout();
         navigate('/login');
+    };
+
+    const handleTest = async () => {
+        setTesting(true);
+        try {
+            const result = await testNginxConfig();
+            if (result.success) {
+                toast.success('配置测试通过', {
+                    description: result.output,
+                });
+            } else {
+                toast.error('配置测试失败', {
+                    description: result.output,
+                });
+            }
+        } catch (err) {
+            toast.error('测试失败', {
+                description: (err as Error).message,
+            });
+        } finally {
+            setTesting(false);
+        }
+    };
+
+    const handleReload = async () => {
+        setReloading(true);
+        try {
+            const result = await reloadNginx();
+            if (result.success) {
+                toast.success('Nginx 重载成功');
+            } else {
+                toast.error('Nginx 重载失败', {
+                    description: result.output,
+                });
+            }
+        } catch (err) {
+            toast.error('重载失败', {
+                description: (err as Error).message,
+            });
+        } finally {
+            setReloading(false);
+        }
     };
 
     if (isPending) {
@@ -57,20 +103,81 @@ export default function HomePage() {
         <div className="min-h-screen flex flex-col">
             {/* Header */}
             <header className="border-b bg-card">
-                <div className="container mx-auto flex h-16 items-center justify-between px-4">
-                    <div className="flex items-center gap-2">
-                        <Rocket className="h-6 w-6 text-primary" />
-                        <h1 className="text-xl font-semibold">Hop 代理管理</h1>
+                <div className="container mx-auto flex h-14 items-center justify-between px-4">
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <Rocket className="h-5 w-5 text-primary" />
+                            <h1 className="text-lg font-semibold">Hop</h1>
+                        </div>
+                        {/* 快速访问导航 */}
+                        <nav className="flex items-center gap-1">
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => navigate('/nginx/edit?type=main')}
+                                className="gap-1.5"
+                            >
+                                <Settings className="h-4 w-4 text-blue-500" />
+                                主配置
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => navigate('/nginx/browse?dir=snippets')}
+                                className="gap-1.5"
+                            >
+                                <FileCode className="h-4 w-4 text-purple-500" />
+                                代码片段
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => navigate('/nginx/browse?dir=ssl')}
+                                className="gap-1.5"
+                            >
+                                <Shield className="h-4 w-4 text-green-500" />
+                                SSL 证书
+                            </Button>
+                        </nav>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        {/* Nginx 操作按钮 */}
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleTest}
+                            disabled={testing}
+                            className="gap-1.5"
+                        >
+                            {testing ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                            )}
+                            测试
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={handleReload}
+                            disabled={reloading}
+                            className="gap-1.5"
+                        >
+                            {reloading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-4 w-4" />
+                            )}
+                            重载
+                        </Button>
+                        <div className="w-px h-6 bg-border mx-1" />
                         <ThemeToggle />
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <User className="h-4 w-4" />
                             <span className="text-sm">{session?.user?.name || session?.user?.email}</span>
                         </div>
-                        <Button variant="outline" size="sm" onClick={handleLogout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            退出登录
+                        <Button variant="ghost" size="sm" onClick={handleLogout}>
+                            <LogOut className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
@@ -78,76 +185,18 @@ export default function HomePage() {
 
             {/* Main Content */}
             <main className="flex-1 p-6">
-                <div className="container mx-auto max-w-6xl">
-                    {/* Quick Access */}
-                    <h2 className="text-lg font-semibold mb-4">快速访问</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <Card 
-                            className="cursor-pointer hover:bg-accent transition-colors"
-                            onClick={() => navigate('/nginx')}
-                        >
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <Server className="h-5 w-5 text-orange-500" />
-                                    Nginx 管理
-                                </CardTitle>
-                                <CardDescription>管理网站配置</CardDescription>
-                            </CardHeader>
-                        </Card>
-
-                        <Card 
-                            className="cursor-pointer hover:bg-accent transition-colors"
-                            onClick={() => navigate('/nginx/edit?type=main')}
-                        >
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <Settings className="h-5 w-5 text-blue-500" />
-                                    主配置
-                                </CardTitle>
-                                <CardDescription>nginx.conf</CardDescription>
-                            </CardHeader>
-                        </Card>
-
-                        <Card 
-                            className="cursor-pointer hover:bg-accent transition-colors"
-                            onClick={() => navigate('/nginx/browse?dir=snippets')}
-                        >
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <FileCode className="h-5 w-5 text-purple-500" />
-                                    代码片段
-                                </CardTitle>
-                                <CardDescription>snippets 目录</CardDescription>
-                            </CardHeader>
-                        </Card>
-
-                        <Card 
-                            className="cursor-pointer hover:bg-accent transition-colors"
-                            onClick={() => navigate('/nginx/browse?dir=ssl')}
-                        >
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <Shield className="h-5 w-5 text-green-500" />
-                                    SSL 证书
-                                </CardTitle>
-                                <CardDescription>ssl 目录</CardDescription>
-                            </CardHeader>
-                        </Card>
-                    </div>
-
+                <div className="container mx-auto max-w-4xl">
                     {/* Sites List */}
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                            <Globe className="h-5 w-5" />
-                            网站列表
-                        </h2>
-                        <Button variant="ghost" size="sm" onClick={() => navigate('/nginx')}>
-                            查看全部
-                            <ChevronRight className="ml-1 h-4 w-4" />
-                        </Button>
-                    </div>
-                    
                     <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Globe className="h-5 w-5" />
+                                网站列表
+                            </CardTitle>
+                            <CardDescription>
+                                conf.d 目录下的配置文件，每个文件代表一个网站
+                            </CardDescription>
+                        </CardHeader>
                         <CardContent className="p-0">
                             {loadingSites ? (
                                 <div className="flex items-center justify-center py-12">
@@ -163,14 +212,25 @@ export default function HomePage() {
                                     {sites.map((site) => (
                                         <div
                                             key={site.path}
-                                            className="flex items-center justify-between py-3 px-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                                            className="flex items-center justify-between py-3 px-6 hover:bg-accent/50 cursor-pointer transition-colors"
                                             onClick={() => navigate(`/nginx/edit?path=${encodeURIComponent(site.path)}`)}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <File className="h-4 w-4 text-muted-foreground" />
-                                                <span className="font-medium">{site.name}</span>
+                                                <File className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                <div className="min-w-0">
+                                                    <p className="font-medium">{site.name}</p>
+                                                    {site.serverNames.length > 0 ? (
+                                                        <p className="text-sm text-primary truncate">
+                                                            {site.serverNames.join(', ')}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-sm text-muted-foreground italic">
+                                                            无 server_name
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                                         </div>
                                     ))}
                                 </div>

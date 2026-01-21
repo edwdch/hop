@@ -110,7 +110,7 @@ export default function BrowsePage() {
         <div className="container mx-auto p-6 max-w-6xl">
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
-                <Button variant="ghost" size="icon" onClick={() => navigate('/nginx')}>
+                <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>

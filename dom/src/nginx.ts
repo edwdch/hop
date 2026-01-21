@@ -17,6 +17,29 @@ interface FileInfo {
     modifiedAt?: string;
 }
 
+interface SiteInfo extends FileInfo {
+    serverNames: string[];
+}
+
+// 从配置文件内容中提取 server_name
+function extractServerNames(content: string): string[] {
+    const serverNames: string[] = [];
+    // 匹配 server_name 指令，支持多个域名
+    const regex = /server_name\s+([^;]+);/g;
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+        const captured = match[1];
+        if (!captured) continue;
+        const names = captured.trim().split(/\s+/);
+        for (const name of names) {
+            if (name && name !== '_' && !serverNames.includes(name)) {
+                serverNames.push(name);
+            }
+        }
+    }
+    return serverNames;
+}
+
 // 执行命令的辅助函数
 function execCommand(command: string, args: string[]): Promise<{ success: boolean; output: string; error?: string }> {
     return new Promise((resolve) => {
@@ -107,11 +130,27 @@ export const nginxPlugin = new Elysia({ prefix: '/api/nginx' })
         sslDir: NGINX_SSL_DIR,
     }))
 
-    // 获取网站列表（conf.d 目录下的文件）
+    // 获取网站列表（conf.d 目录下的文件，包含 server_name）
     .get('/sites', async () => {
         const files = await listFiles(NGINX_CONFIGS_DIR);
+        const siteFiles = files.filter(f => f.type === 'file');
+        
+        // 读取每个文件并提取 server_name
+        const sites: SiteInfo[] = await Promise.all(
+            siteFiles.map(async (file) => {
+                let serverNames: string[] = [];
+                try {
+                    const content = await readFile(file.path, 'utf-8');
+                    serverNames = extractServerNames(content);
+                } catch {
+                    // 无法读取文件时忽略
+                }
+                return { ...file, serverNames };
+            })
+        );
+        
         return {
-            sites: files.filter(f => f.type === 'file'),
+            sites,
             directory: NGINX_CONFIGS_DIR,
         };
     })

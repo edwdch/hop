@@ -8,6 +8,10 @@ export interface FileInfo {
     modifiedAt?: string;
 }
 
+export interface SiteInfo extends FileInfo {
+    serverNames: string[];
+}
+
 export interface NginxConfig {
     configPath: string;
     configsDir: string;
@@ -37,7 +41,7 @@ export async function getNginxConfig(): Promise<NginxConfig> {
 }
 
 // 获取网站列表
-export async function getSites(): Promise<{ sites: FileInfo[]; directory: string }> {
+export async function getSites(): Promise<{ sites: SiteInfo[]; directory: string }> {
     const res = await fetch(`${API_BASE}/sites`);
     return res.json();
 }
