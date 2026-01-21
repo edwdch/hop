@@ -434,20 +434,20 @@ export default function ProxyEditPage() {
 
             {/* Preview Dialog */}
             <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-3xl max-h-[80vh]">
-                    <DialogHeader>
+                <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+                    <DialogHeader className="shrink-0">
                         <DialogTitle className="flex items-center gap-2">
                             <Eye className="h-5 w-5" />
                             配置预览
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="overflow-auto">
+                    <div className="flex-1 overflow-auto min-h-0">
                         {previewLoading ? (
                             <div className="flex items-center justify-center py-8">
                                 <Loader2 className="h-6 w-6 animate-spin" />
                             </div>
                         ) : (
-                            <pre className="bg-muted p-4 rounded text-sm font-mono overflow-x-auto whitespace-pre-wrap">
+                            <pre className="bg-muted p-4 rounded text-sm font-mono whitespace-pre overflow-x-auto">
                                 {previewContent}
                             </pre>
                         )}
