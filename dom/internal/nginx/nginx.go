@@ -59,6 +59,13 @@ func Router() chi.Router {
 	r.Post("/proxy/preview", handlePreviewProxySite)
 	r.Delete("/proxy/delete", handleDeleteProxySite)
 
+	// SNI 路由管理 API
+	r.Get("/stream/list", handleListStreamRoutes)
+	r.Get("/stream/get", handleGetStreamRoute)
+	r.Post("/stream/save", handleSaveStreamRoute)
+	r.Post("/stream/toggle", handleToggleStreamRoute)
+	r.Delete("/stream/delete", handleDeleteStreamRoute)
+
 	return r
 }
 
@@ -476,8 +483,21 @@ func handleSaveTemplateParams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 读取 stream 路由
+	streamRoutes, err := ListStreamRoutes()
+	if err != nil {
+		log.Warn("读取 stream 路由失败", map[string]interface{}{"error": err.Error()})
+		streamRoutes = []StreamRoute{}
+	}
+
+	// 组合完整参数
+	fullParams := FullTemplateParams{
+		TemplateParams: params,
+		StreamRoutes:   streamRoutes,
+	}
+
 	// 生成并保存新的 nginx.conf
-	if err := GenerateAndSaveNginxConf(params); err != nil {
+	if err := GenerateAndSaveNginxConf(fullParams); err != nil {
 		jsonError(w, "Failed to generate config: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -488,17 +508,7 @@ func handleSaveTemplateParams(w http.ResponseWriter, r *http.Request) {
 
 // handleRegenerate 使用当前参数重新生成 nginx.conf
 func handleRegenerate(w http.ResponseWriter, r *http.Request) {
-	cfg := config.Get()
-	params := TemplateParams{
-		WorkerProcesses:   cfg.Nginx.WorkerProcesses,
-		WorkerConnections: cfg.Nginx.WorkerConnections,
-		Keepalive:         cfg.Nginx.Keepalive,
-		ClientMaxBodySize: cfg.Nginx.ClientMaxBodySize,
-		Gzip:              cfg.Nginx.Gzip,
-		ServerTokens:      cfg.Nginx.ServerTokens,
-	}
-
-	if err := GenerateAndSaveNginxConf(params); err != nil {
+	if err := RegenerateNginxConf(); err != nil {
 		jsonError(w, "Failed to regenerate config: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

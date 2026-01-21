@@ -8,6 +8,8 @@ import {
     Shield,
     CheckCircle2,
     RefreshCw,
+    Plus,
+    Network,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -56,6 +58,14 @@ export function AppHeader({
                     {/* Quick nav */}
                     <nav className="hidden md:flex items-center gap-1">
                         <Button
+                            size="sm"
+                            onClick={() => navigate('/nginx/proxy')}
+                            className="gap-2 font-mono text-xs uppercase tracking-wider"
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            新建
+                        </Button>
+                        <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => navigate('/nginx/edit?type=main')}
@@ -72,6 +82,15 @@ export function AppHeader({
                         >
                             <Shield className="h-3.5 w-3.5 text-chart-3" />
                             SSL
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate('/stream')}
+                            className="gap-2 font-mono text-xs uppercase tracking-wider"
+                        >
+                            <Network className="h-3.5 w-3.5 text-chart-4" />
+                            分流
                         </Button>
                     </nav>
                 </div>

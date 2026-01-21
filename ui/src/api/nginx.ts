@@ -146,7 +146,6 @@ export async function regenerateConfig(): Promise<{ success: boolean; error?: st
 export interface ProxySite {
     id: string;              // 唯一标识（文件名，不含扩展名）
     serverName: string;      // 域名
-    listenPort?: number;     // 监听端口，默认80
     ssl: boolean;            // 是否启用 SSL
     sslCert?: string;        // SSL 证书路径
     sslKey?: string;         // SSL 私钥路径

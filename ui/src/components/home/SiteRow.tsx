@@ -23,9 +23,6 @@ export function SiteRow({ site, index, onDeleteClick, onNavigate }: SiteRowProps
                     <p className="font-mono text-sm font-medium truncate">
                         {site.serverName}
                     </p>
-                    <p className="text-xs text-muted-foreground font-mono">
-                        :{site.listenPort || 80}
-                    </p>
                 </div>
             </div>
             <div className="w-32 text-center hidden sm:block">

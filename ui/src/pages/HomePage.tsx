@@ -5,7 +5,6 @@ import { useSession, logout } from '@/api/auth';
 import { listProxySites, deleteProxySite, testNginxConfig, reloadNginx, type ProxySite } from '@/api/nginx';
 import { LoadingScreen } from '@/components/home/LoadingScreen';
 import { AppHeader } from '@/components/home/AppHeader';
-import { StatsGrid } from '@/components/home/StatsGrid';
 import { SitesTable } from '@/components/home/SitesTable';
 import { MobileQuickActions } from '@/components/home/MobileQuickActions';
 import { AppFooter } from '@/components/home/AppFooter';
@@ -131,12 +130,6 @@ export default function HomePage() {
 
             <main className="flex-1 p-4 lg:p-6">
                 <div className="max-w-6xl mx-auto space-y-6">
-                    <StatsGrid
-                        sites={sites}
-                        loading={loadingSites}
-                        session={session}
-                    />
-
                     <SitesTable
                         sites={sites}
                         loading={loadingSites}

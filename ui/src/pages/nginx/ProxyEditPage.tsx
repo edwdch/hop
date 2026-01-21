@@ -37,7 +37,6 @@ import { listCertificates, type Certificate, getCertificateStatusLabel } from '@
 const defaultSite: ProxySite = {
     id: '',
     serverName: '',
-    listenPort: 80,
     ssl: false,
     sslCert: '',
     sslKey: '',
@@ -235,15 +234,15 @@ export default function ProxyEditPage() {
 
             {/* Main content */}
             <main className="flex-1 p-4 lg:p-6">
-                <div className="max-w-2xl mx-auto space-y-6">
+                <div className="max-w-2xl mx-auto space-y-4">
                     {/* 基本信息 */}
-                    <div className="bg-card border p-6 space-y-4 animate-fade-up opacity-0 stagger-2">
-                        <div className="flex items-center gap-2 mb-4">
+                    <div className="bg-card border p-4 space-y-3 animate-fade-up opacity-0 stagger-2">
+                        <div className="flex items-center gap-2">
                             <Globe className="h-4 w-4 text-primary" />
-                            <h2 className="font-semibold">基本信息</h2>
+                            <h2 className="font-semibold text-sm">基本信息</h2>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             <Label htmlFor="serverName" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                                 域名
                             </Label>
@@ -254,30 +253,22 @@ export default function ProxyEditPage() {
                                 placeholder="example.com"
                             />
                         </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="listenPort" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                                监听端口
-                            </Label>
-                            <Input
-                                id="listenPort"
-                                type="number"
-                                value={site.listenPort || 80}
-                                onChange={(e) => updateSite({ listenPort: parseInt(e.target.value) || 80 })}
-                                placeholder="80"
-                            />
-                        </div>
                     </div>
 
                     {/* 上游配置 */}
-                    <div className="bg-card border p-6 space-y-4 animate-fade-up opacity-0 stagger-3">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Server className="h-4 w-4 text-accent" />
-                            <h2 className="font-semibold">上游服务</h2>
+                    <div className="bg-card border p-4 space-y-3 animate-fade-up opacity-0 stagger-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Server className="h-4 w-4 text-accent" />
+                                <h2 className="font-semibold text-sm">上游服务</h2>
+                            </div>
+                            <span className="text-xs text-muted-foreground font-mono">
+                                {site.upstreamScheme}://{site.upstreamHost}:{site.upstreamPort}
+                            </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1.5">
                                 <Label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                                     协议
                                 </Label>
@@ -295,7 +286,7 @@ export default function ProxyEditPage() {
                                 </Select>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label htmlFor="upstreamHost" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                                     主机
                                 </Label>
@@ -307,7 +298,7 @@ export default function ProxyEditPage() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label htmlFor="upstreamPort" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
                                     端口
                                 </Label>
@@ -320,25 +311,14 @@ export default function ProxyEditPage() {
                                 />
                             </div>
                         </div>
-
-                        <div className="pt-2 text-xs text-muted-foreground font-mono">
-                            代理目标: {site.upstreamScheme}://{site.upstreamHost}:{site.upstreamPort}
-                        </div>
                     </div>
 
                     {/* 功能选项 */}
-                    <div className="bg-card border p-6 space-y-4 animate-fade-up opacity-0 stagger-4">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Wifi className="h-4 w-4 text-chart-3" />
-                            <h2 className="font-semibold">功能选项</h2>
-                        </div>
-
-                        <div className="flex items-center justify-between py-2">
-                            <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">WebSocket 支持</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    启用 WebSocket 连接升级和长连接支持
-                                </p>
+                    <div className="bg-card border p-4 animate-fade-up opacity-0 stagger-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Wifi className="h-4 w-4 text-chart-3" />
+                                <Label className="text-sm font-semibold">WebSocket 支持</Label>
                             </div>
                             <Switch
                                 checked={site.websocket}
@@ -348,11 +328,11 @@ export default function ProxyEditPage() {
                     </div>
 
                     {/* SSL 配置 */}
-                    <div className="bg-card border p-6 space-y-4 animate-fade-up opacity-0 stagger-5">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="bg-card border p-4 space-y-3 animate-fade-up opacity-0 stagger-5">
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Shield className="h-4 w-4 text-chart-3" />
-                                <h2 className="font-semibold">SSL/HTTPS</h2>
+                                <h2 className="font-semibold text-sm">SSL/HTTPS</h2>
                             </div>
                             <Switch
                                 checked={site.ssl}
@@ -361,65 +341,48 @@ export default function ProxyEditPage() {
                         </div>
 
                         {site.ssl && (
-                            <div className="space-y-4 pt-2">
+                            <div className="space-y-3">
                                 {certificatesLoading ? (
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                         <span className="text-sm">加载证书列表...</span>
                                     </div>
                                 ) : certificates.length > 0 ? (
-                                    <>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                                                选择证书
-                                            </Label>
-                                            <Select
-                                                value={site.certificateId || ''}
-                                                onValueChange={(value) => updateSite({ certificateId: value })}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="请选择一个证书" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {certificates.map((cert) => (
-                                                        <SelectItem key={cert.id} value={cert.id}>
-                                                            <div className="flex items-center gap-2">
-                                                                <span>{cert.domain}</span>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    ({getCertificateStatusLabel(cert.status)}, 剩余 {cert.daysRemaining} 天)
-                                                                </span>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        {site.certificateId && (
-                                            <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
-                                                已选择证书将自动应用证书路径和私钥路径
-                                            </div>
-                                        )}
-
-                                        <p className="text-xs text-muted-foreground">
-                                            启用 SSL 后，HTTP 请求将自动重定向到 HTTPS
-                                        </p>
-                                    </>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                                            选择证书
+                                        </Label>
+                                        <Select
+                                            value={site.certificateId || ''}
+                                            onValueChange={(value) => updateSite({ certificateId: value })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="请选择一个证书" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {certificates.map((cert) => (
+                                                    <SelectItem key={cert.id} value={cert.id}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{cert.domain}</span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                ({getCertificateStatusLabel(cert.status)}, 剩余 {cert.daysRemaining} 天)
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 ) : (
-                                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded space-y-3">
-                                        <div className="flex items-start gap-2">
-                                            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-medium text-amber-500">尚未申请证书</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    启用 SSL 需要先在 SSL 证书管理页面申请证书
-                                                </p>
-                                            </div>
+                                    <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                                            <span className="text-sm text-amber-500">尚未申请证书</span>
                                         </div>
                                         <Link to="/ssl">
-                                            <Button variant="outline" size="sm" className="gap-2 text-xs">
+                                            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
                                                 <ExternalLink className="h-3 w-3" />
-                                                前往申请证书
+                                                申请证书
                                             </Button>
                                         </Link>
                                     </div>
@@ -428,9 +391,9 @@ export default function ProxyEditPage() {
                         )}
 
                         {!site.ssl && (
-                            <div className="flex items-center gap-2 text-muted-foreground">
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm">
                                 <Unlock className="h-4 w-4" />
-                                <span className="text-sm">当前使用 HTTP 协议</span>
+                                <span>当前使用 HTTP 协议</span>
                             </div>
                         )}
                     </div>

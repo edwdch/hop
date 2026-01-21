@@ -14,12 +14,11 @@ import (
 
 // ProxySite 代理站点配置
 type ProxySite struct {
-	ID         string `json:"id"`                   // 唯一标识（文件名，不含扩展名）
-	ServerName string `json:"serverName"`           // 域名
-	ListenPort int    `json:"listenPort,omitempty"` // 监听端口，默认80
-	SSL        bool   `json:"ssl"`                  // 是否启用 SSL
-	SSLCert    string `json:"sslCert,omitempty"`    // SSL 证书路径
-	SSLKey     string `json:"sslKey,omitempty"`     // SSL 私钥路径
+	ID         string `json:"id"`                // 唯一标识（文件名，不含扩展名）
+	ServerName string `json:"serverName"`        // 域名
+	SSL        bool   `json:"ssl"`               // 是否启用 SSL
+	SSLCert    string `json:"sslCert,omitempty"` // SSL 证书路径
+	SSLKey     string `json:"sslKey,omitempty"`  // SSL 私钥路径
 
 	// 证书选择（新增）
 	CertificateID string `json:"certificateId,omitempty"` // 关联的证书 ID
@@ -38,7 +37,7 @@ const proxyTemplate = `# 由 Hop 自动生成，请勿手动修改
 # 站点: {{.ServerName}}
 
 server {
-    listen {{if .SSL}}443 ssl{{else}}{{.ListenPort}}{{end}};
+    listen 444{{if .SSL}} ssl{{end}};
     server_name {{.ServerName}};
 {{if .SSL}}
     ssl_certificate {{.SSLCert}};
@@ -59,23 +58,10 @@ server {
 {{end}}
     }
 }
-{{if .SSL}}
-# HTTP 重定向到 HTTPS
-server {
-    listen {{.ListenPort}};
-    server_name {{.ServerName}};
-    return 301 https://$server_name$request_uri;
-}
-{{end}}
 `
 
 // RenderProxySiteConfig 渲染代理站点配置
 func RenderProxySiteConfig(site ProxySite) (string, error) {
-	// 设置默认值
-	if site.ListenPort == 0 {
-		site.ListenPort = 80
-	}
-
 	tmpl, err := template.New("proxy").Parse(proxyTemplate)
 	if err != nil {
 		return "", fmt.Errorf("解析模板失败: %w", err)

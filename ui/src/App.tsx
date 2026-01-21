@@ -10,6 +10,7 @@ import NginxBrowsePage from '@/pages/nginx/BrowsePage';
 import ProxyEditPage from '@/pages/nginx/ProxyEditPage';
 import SSLPage from '@/pages/ssl/SSLPage';
 import DNSProvidersPage from '@/pages/ssl/DNSProvidersPage';
+import StreamPage from '@/pages/stream/StreamPage';
 
 // 需要登录才能访问的路由守卫
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -119,6 +120,15 @@ function App() {
           element={
             <ProtectedRoute>
               <DNSProvidersPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* SNI 分流管理 - 需要登录 */}
+        <Route
+          path="/stream"
+          element={
+            <ProtectedRoute>
+              <StreamPage />
             </ProtectedRoute>
           }
         />
