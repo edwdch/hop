@@ -40,3 +40,4 @@ bin/
 dom/data/hop.db
 hop
 dom/config.toml
+dom/tmp/

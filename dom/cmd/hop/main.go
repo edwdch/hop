@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -91,10 +92,119 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var systemdCmd = &cobra.Command{
+	Use:   "systemd",
+	Short: "生成 systemd 服务配置",
+	Long: `生成推荐的 systemd 服务配置文件。
+
+示例:
+  hop systemd                     # 输出到终端
+  hop systemd -o hop.service      # 写入文件
+  hop systemd --install           # 直接安装到系统 (需要 root 权限)`,
+	Run: runSystemdCmd,
+}
+
+var (
+	systemdOutput  string
+	systemdInstall bool
+)
+
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "C", "", "配置文件路径")
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(systemdCmd)
+
+	systemdCmd.Flags().StringVarP(&systemdOutput, "output", "o", "", "输出文件路径")
+	systemdCmd.Flags().BoolVar(&systemdInstall, "install", false, "直接安装到 /etc/systemd/system/")
+}
+
+func runSystemdCmd(cmd *cobra.Command, args []string) {
+	// 获取当前工作目录作为配置文件的父目录
+	workDir, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "错误: 无法获取工作目录: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 配置文件路径：使用当前目录下的 config.toml
+	configPath := filepath.Join(workDir, "config.toml")
+	if configFile != "" {
+		// 如果指定了配置文件，转换为绝对路径
+		if filepath.IsAbs(configFile) {
+			configPath = configFile
+		} else {
+			configPath = filepath.Join(workDir, configFile)
+		}
+	}
+
+	// 生成 systemd 配置
+	serviceContent := generateSystemdService(configPath)
+
+	// 根据选项处理输出
+	if systemdInstall {
+		// 直接安装到系统
+		servicePath := "/etc/systemd/system/hop.service"
+		if err := os.WriteFile(servicePath, []byte(serviceContent), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "错误: 无法写入服务文件 (需要 root 权限): %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("服务文件已安装: %s\n", servicePath)
+		fmt.Println("\n后续步骤:")
+		fmt.Println("  sudo systemctl daemon-reload")
+		fmt.Println("  sudo systemctl enable hop")
+		fmt.Println("  sudo systemctl start hop")
+	} else if systemdOutput != "" {
+		// 写入指定文件
+		if _, err := os.Stat(systemdOutput); err == nil {
+			fmt.Fprintf(os.Stderr, "错误: 文件 %s 已存在\n", systemdOutput)
+			os.Exit(1)
+		}
+		if err := os.WriteFile(systemdOutput, []byte(serviceContent), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "错误: 无法写入文件: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("服务文件已生成: %s\n", systemdOutput)
+		fmt.Println("\n安装步骤:")
+		fmt.Printf("  sudo cp %s /etc/systemd/system/\n", systemdOutput)
+		fmt.Println("  sudo systemctl daemon-reload")
+		fmt.Println("  sudo systemctl enable hop")
+		fmt.Println("  sudo systemctl start hop")
+	} else {
+		// 输出到终端
+		fmt.Println(serviceContent)
+	}
+}
+
+func generateSystemdService(configPath string) string {
+	return fmt.Sprintf(`[Unit]
+Description=Hop - Nginx Configuration Manager
+Documentation=https://github.com/hop/hop
+After=network.target nginx.service
+Wants=nginx.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/hop -C %s
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# 安全加固
+NoNewPrivileges=false
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
+# 环境变量
+Environment=GIN_MODE=release
+
+[Install]
+WantedBy=multi-user.target
+`, configPath)
 }
 
 func runServer() {

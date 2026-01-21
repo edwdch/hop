@@ -12,7 +12,7 @@ echo -e "${GREEN}=== Hop 构建脚本 (Go 版本) ===${NC}"
 # 项目根目录
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 UI_DIR="$ROOT_DIR/ui"
-BACKEND_DIR="$ROOT_DIR/backend"
+BACKEND_DIR="$ROOT_DIR/dom"
 ASSETS_DIR="$BACKEND_DIR/internal/assets/dist"
 
 # 版本信息
@@ -73,9 +73,9 @@ CGO_ENABLED=1 go build \
     ./cmd/hop
 
 # 复制默认配置文件
-if [ -f "$BACKEND_DIR/config.example.toml" ]; then
-    cp "$BACKEND_DIR/config.example.toml" "$ROOT_DIR/config.example.toml"
-fi
+# if [ -f "$BACKEND_DIR/config.example.toml" ]; then
+#     cp "$BACKEND_DIR/config.example.toml" "$ROOT_DIR/config.example.toml"
+# fi
 
 # 显示结果
 if [ -f "$ROOT_DIR/$OUTPUT_NAME" ]; then
