@@ -139,6 +139,12 @@ ssl_dir = "/etc/nginx/ssl"
 
 [data]
 # 数据目录（相对路径基于配置文件位置）
+# 存储数据库、lego 工作目录等
 dir = "./data"
+
+# SSL 证书自动续期说明：
+# - 系统会每 24 小时检查一次证书过期时间
+# - 如果证书在 30 天内过期且开启了自动续期，系统会自动续期
+# - 请确保已安装 lego：go install github.com/go-acme/lego/v4/cmd/lego@latest
 `
 }

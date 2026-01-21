@@ -157,6 +157,52 @@ func runMigrations() error {
 		`CREATE INDEX IF NOT EXISTS idx_session_token ON session(token)`,
 		`CREATE INDEX IF NOT EXISTS idx_account_userId ON account(userId)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_email ON user(email)`,
+
+		// DNS Provider 表
+		`CREATE TABLE IF NOT EXISTS dns_provider (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			type TEXT NOT NULL,
+			config TEXT NOT NULL,
+			createdAt TEXT NOT NULL,
+			updatedAt TEXT NOT NULL
+		)`,
+
+		// Certificate 表
+		`CREATE TABLE IF NOT EXISTS certificate (
+			id TEXT PRIMARY KEY,
+			domain TEXT UNIQUE NOT NULL,
+			domains TEXT NOT NULL,
+			dnsProviderId TEXT NOT NULL,
+			certPath TEXT NOT NULL,
+			keyPath TEXT NOT NULL,
+			issuer TEXT,
+			notBefore TEXT NOT NULL,
+			notAfter TEXT NOT NULL,
+			autoRenew INTEGER DEFAULT 1,
+			lastRenewAt TEXT,
+			status TEXT NOT NULL DEFAULT 'pending',
+			error TEXT,
+			createdAt TEXT NOT NULL,
+			updatedAt TEXT NOT NULL,
+			FOREIGN KEY (dnsProviderId) REFERENCES dns_provider(id)
+		)`,
+
+		// Certificate Log 表
+		`CREATE TABLE IF NOT EXISTS certificate_log (
+			id TEXT PRIMARY KEY,
+			certificateId TEXT NOT NULL,
+			action TEXT NOT NULL,
+			message TEXT NOT NULL,
+			createdAt TEXT NOT NULL,
+			FOREIGN KEY (certificateId) REFERENCES certificate(id) ON DELETE CASCADE
+		)`,
+
+		// SSL 相关索引
+		`CREATE INDEX IF NOT EXISTS idx_certificate_domain ON certificate(domain)`,
+		`CREATE INDEX IF NOT EXISTS idx_certificate_status ON certificate(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_certificate_notAfter ON certificate(notAfter)`,
+		`CREATE INDEX IF NOT EXISTS idx_certificate_log_certId ON certificate_log(certificateId)`,
 	}
 
 	for _, migration := range migrations {

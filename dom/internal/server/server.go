@@ -16,6 +16,7 @@ import (
 	"github.com/hop/backend/internal/config"
 	"github.com/hop/backend/internal/logger"
 	"github.com/hop/backend/internal/nginx"
+	"github.com/hop/backend/internal/ssl"
 )
 
 var log = logger.WithTag("server")
@@ -64,6 +65,9 @@ func (s *Server) setupRoutes() {
 
 		// Nginx 管理路由
 		r.Mount("/nginx", nginx.Router())
+
+		// SSL 证书管理路由
+		r.Mount("/ssl", ssl.Router())
 	})
 
 	// 静态文件服务 (SPA)

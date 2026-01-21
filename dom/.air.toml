@@ -17,7 +17,7 @@ full_bin = "./hop -C config.toml"
 include_dir = ["cmd", "internal", "pkg", "."]
 
 # 排除不需要监听的目录
-exclude_dir = ["assets", "tmp", "vendor", "test", ".git"]
+exclude_dir = ["assets", "tmp", "vendor", "test", ".git", "data"]
 
 # 监听这些文件后缀
 include_ext = ["go", "tpl", "tmpl", "html", "toml"]

@@ -260,7 +260,7 @@ export default function HomePage() {
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => navigate('/nginx/browse?dir=ssl')}
+                                onClick={() => navigate('/ssl')}
                                 className="gap-2 font-mono text-xs uppercase tracking-wider"
                             >
                                 <Shield className="h-3.5 w-3.5 text-chart-3" />
@@ -480,7 +480,7 @@ export default function HomePage() {
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={() => navigate('/nginx/browse?dir=ssl')}
+                            onClick={() => navigate('/ssl')}
                             className="flex-col h-auto py-4 gap-2"
                         >
                             <Shield className="h-5 w-5 text-chart-3" />

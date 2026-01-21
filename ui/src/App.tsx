@@ -7,6 +7,8 @@ import LoginPage from '@/pages/LoginPage';
 import HomePage from '@/pages/HomePage';
 import NginxEditPage from '@/pages/nginx/EditPage';
 import NginxBrowsePage from '@/pages/nginx/BrowsePage';
+import SSLPage from '@/pages/ssl/SSLPage';
+import DNSProvidersPage from '@/pages/ssl/DNSProvidersPage';
 
 // 需要登录才能访问的路由守卫
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -90,6 +92,23 @@ function App() {
           element={
             <ProtectedRoute>
               <NginxBrowsePage />
+            </ProtectedRoute>
+          }
+        />
+        {/* SSL 证书管理 - 需要登录 */}
+        <Route
+          path="/ssl"
+          element={
+            <ProtectedRoute>
+              <SSLPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ssl/providers"
+          element={
+            <ProtectedRoute>
+              <DNSProvidersPage />
             </ProtectedRoute>
           }
         />

@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hop/backend/internal/database"
 	"github.com/hop/backend/internal/logger"
 	"github.com/hop/backend/internal/server"
+	"github.com/hop/backend/internal/ssl"
 )
 
 var (
@@ -226,6 +228,20 @@ func runServer() {
 	}
 	defer database.Close()
 
+	// 启动 SSL 证书自动续期检查 (每天检查一次，提前 30 天续期)
+	scheduler := ssl.NewScheduler(
+		"admin@example.com", // 默认邮箱，实际申请时会使用用户指定的邮箱
+		30,                  // 提前 30 天续期
+		24*time.Hour,        // 每天检查一次
+	)
+	go scheduler.Start()
+	defer scheduler.Stop()
+
+	logger.Info("SSL 证书自动续期已启动", map[string]interface{}{
+		"检查间隔": "24 小时",
+		"续期阈值": "30 天",
+	})
+
 	// 创建服务器
 	srv := server.New(cfg)
 
@@ -236,6 +252,7 @@ func runServer() {
 		<-sigChan
 
 		logger.Info("正在关闭服务器...")
+		scheduler.Stop()
 		database.Close()
 		os.Exit(0)
 	}()
