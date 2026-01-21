@@ -204,7 +204,7 @@ export default function HomePage() {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 p-4 lg:p-6 industrial-grid">
+            <main className="flex-1 p-4 lg:p-6">
                 <div className="max-w-6xl mx-auto space-y-6">
                     {/* Stats row */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up opacity-0 stagger-2">

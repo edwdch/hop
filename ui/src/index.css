@@ -256,12 +256,12 @@ code, pre, .font-mono, [data-mono] {
 .stagger-7 { animation-delay: 0.35s; }
 .stagger-8 { animation-delay: 0.4s; }
 
-/* Industrial textures */
+/* Industrial textures - subtle version */
 .industrial-grid {
   background-image: 
-    linear-gradient(to right, hsl(220 15% 18% / 0.5) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(220 15% 18% / 0.5) 1px, transparent 1px);
-  background-size: 24px 24px;
+    linear-gradient(to right, hsl(220 15% 15% / 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(220 15% 15% / 0.15) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
 .industrial-noise {

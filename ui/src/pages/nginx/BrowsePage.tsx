@@ -147,7 +147,7 @@ export default function BrowsePage() {
             </header>
 
             {/* Main content */}
-            <main className="flex-1 p-4 lg:p-6 industrial-grid">
+            <main className="flex-1 p-4 lg:p-6">
                 <div className="max-w-4xl mx-auto">
                     <div className="bg-card border animate-fade-up opacity-0 stagger-2">
                         {/* Table header */}

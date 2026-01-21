@@ -32,14 +32,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex industrial-grid">
+    <div className="min-h-screen flex">
       {/* Left Panel - Decorative */}
       <div className="hidden lg:flex lg:w-1/2 bg-card relative overflow-hidden">
-        {/* Scan lines effect */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent opacity-50" />
-        
-        {/* Grid pattern */}
-        <div className="absolute inset-0 industrial-grid opacity-30" />
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 industrial-grid" />
         
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
