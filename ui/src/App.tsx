@@ -5,6 +5,9 @@ import { checkNeedInit, useSession } from '@/api/auth';
 import InitPage from '@/pages/InitPage';
 import LoginPage from '@/pages/LoginPage';
 import HomePage from '@/pages/HomePage';
+import NginxSitesPage from '@/pages/nginx/SitesPage';
+import NginxEditPage from '@/pages/nginx/EditPage';
+import NginxBrowsePage from '@/pages/nginx/BrowsePage';
 
 // 需要登录才能访问的路由守卫
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -72,6 +75,31 @@ function App() {
                 <HomePage />
               </ProtectedRoute>
             )
+          }
+        />
+        {/* Nginx 配置管理 - 需要登录 */}
+        <Route
+          path="/nginx"
+          element={
+            <ProtectedRoute>
+              <NginxSitesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/nginx/edit"
+          element={
+            <ProtectedRoute>
+              <NginxEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/nginx/browse"
+          element={
+            <ProtectedRoute>
+              <NginxBrowsePage />
+            </ProtectedRoute>
           }
         />
         {/* 其他路由重定向到首页 */}

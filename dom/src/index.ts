@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { auth, hasUsers } from './auth';
 import { logger } from './lib/logger';
+import { nginxPlugin } from './nginx';
 
 const app = new Elysia()
     .use(cors({
@@ -19,6 +20,7 @@ const app = new Elysia()
         logger.info({ method: request.method, path: url.pathname, status: set.status || 200 }, 'response sent');
     })
     .get("/api/ping", () => ({ pong: true }))
+    .use(nginxPlugin)
     // 3. 检查是否需要初始化
     .get('/api/auth/need-init', async () => {
         const hasExistingUsers = await hasUsers();
