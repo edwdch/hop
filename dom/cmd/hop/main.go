@@ -179,7 +179,7 @@ func runSystemdCmd(cmd *cobra.Command, args []string) {
 func generateSystemdService(configPath string) string {
 	return fmt.Sprintf(`[Unit]
 Description=Hop - Nginx Configuration Manager
-Documentation=https://github.com/hop/hop
+Documentation=https://github.com/edwdch/hop
 After=network.target nginx.service
 Wants=nginx.service
 
