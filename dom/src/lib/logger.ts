@@ -1,18 +1,8 @@
-import pino from 'pino';
+import { consola } from 'consola';
 
-export const logger = pino({
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
-      ignore: 'pid,hostname',
-    },
-  },
-  level: process.env.LOG_LEVEL || 'info',
-});
+export const logger = consola.withTag('hop');
 
 // 子 logger 工厂函数
 export function createLogger(name: string) {
-  return logger.child({ name });
+  return consola.withTag(name);
 }

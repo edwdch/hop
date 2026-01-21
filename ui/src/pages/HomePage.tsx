@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Rocket, User, LogOut, Construction, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useSession, logout } from '@/api/auth';
 
 export default function HomePage() {
