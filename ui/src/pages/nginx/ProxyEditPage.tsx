@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
     ArrowLeft,
@@ -10,7 +10,9 @@ import {
     Shield,
     Wifi,
     Server,
-    Unlock
+    Unlock,
+    AlertCircle,
+    ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +32,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { getProxySite, saveProxySite, previewProxySite, type ProxySite } from '@/api/nginx';
+import { listCertificates, type Certificate, getCertificateStatusLabel } from '@/api/ssl';
 
 const defaultSite: ProxySite = {
     id: '',
@@ -38,6 +41,7 @@ const defaultSite: ProxySite = {
     ssl: false,
     sslCert: '',
     sslKey: '',
+    certificateId: '',
     upstreamScheme: 'http',
     upstreamHost: '127.0.0.1',
     upstreamPort: 8080,
@@ -57,11 +61,34 @@ export default function ProxyEditPage() {
     const [previewContent, setPreviewContent] = useState('');
     const [previewLoading, setPreviewLoading] = useState(false);
 
+    // 证书列表
+    const [certificates, setCertificates] = useState<Certificate[]>([]);
+    const [certificatesLoading, setCertificatesLoading] = useState(true);
+
+    // 加载证书列表
+    useEffect(() => {
+        loadCertificates();
+    }, []);
+
     useEffect(() => {
         if (editId) {
             loadSite(editId);
         }
     }, [editId]);
+
+    const loadCertificates = async () => {
+        setCertificatesLoading(true);
+        try {
+            const result = await listCertificates();
+            // 只显示有效的证书
+            setCertificates(result.certificates?.filter(c => c.status === 'active') || []);
+        } catch (err) {
+            console.error('加载证书列表失败:', err);
+            setCertificates([]);
+        } finally {
+            setCertificatesLoading(false);
+        }
+    };
 
     const loadSite = async (id: string) => {
         setLoading(true);
@@ -88,6 +115,11 @@ export default function ProxyEditPage() {
         }
         if (!site.upstreamPort) {
             toast.error('请输入上游端口');
+            return;
+        }
+        // SSL 验证：启用 SSL 时必须选择证书
+        if (site.ssl && !site.certificateId) {
+            toast.error('请选择一个 SSL 证书');
             return;
         }
 
@@ -324,39 +356,74 @@ export default function ProxyEditPage() {
                             </div>
                             <Switch
                                 checked={site.ssl}
-                                onCheckedChange={(checked: boolean) => updateSite({ ssl: checked })}
+                                onCheckedChange={(checked: boolean) => updateSite({ ssl: checked, certificateId: '' })}
                             />
                         </div>
 
                         {site.ssl && (
                             <div className="space-y-4 pt-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="sslCert" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                                        证书路径
-                                    </Label>
-                                    <Input
-                                        id="sslCert"
-                                        value={site.sslCert || ''}
-                                        onChange={(e) => updateSite({ sslCert: e.target.value })}
-                                        placeholder="/path/to/cert.pem"
-                                    />
-                                </div>
+                                {certificatesLoading ? (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span className="text-sm">加载证书列表...</span>
+                                    </div>
+                                ) : certificates.length > 0 ? (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                                                选择证书
+                                            </Label>
+                                            <Select
+                                                value={site.certificateId || ''}
+                                                onValueChange={(value) => updateSite({ certificateId: value })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="请选择一个证书" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {certificates.map((cert) => (
+                                                        <SelectItem key={cert.id} value={cert.id}>
+                                                            <div className="flex items-center gap-2">
+                                                                <span>{cert.domain}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    ({getCertificateStatusLabel(cert.status)}, 剩余 {cert.daysRemaining} 天)
+                                                                </span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="sslKey" className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                                        私钥路径
-                                    </Label>
-                                    <Input
-                                        id="sslKey"
-                                        value={site.sslKey || ''}
-                                        onChange={(e) => updateSite({ sslKey: e.target.value })}
-                                        placeholder="/path/to/key.pem"
-                                    />
-                                </div>
+                                        {site.certificateId && (
+                                            <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded">
+                                                已选择证书将自动应用证书路径和私钥路径
+                                            </div>
+                                        )}
 
-                                <p className="text-xs text-muted-foreground">
-                                    启用 SSL 后，HTTP 请求将自动重定向到 HTTPS
-                                </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            启用 SSL 后，HTTP 请求将自动重定向到 HTTPS
+                                        </p>
+                                    </>
+                                ) : (
+                                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded space-y-3">
+                                        <div className="flex items-start gap-2">
+                                            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium text-amber-500">尚未申请证书</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    启用 SSL 需要先在 SSL 证书管理页面申请证书
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Link to="/ssl">
+                                            <Button variant="outline" size="sm" className="gap-2 text-xs">
+                                                <ExternalLink className="h-3 w-3" />
+                                                前往申请证书
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
                         )}
 

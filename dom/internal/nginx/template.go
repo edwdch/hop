@@ -78,7 +78,7 @@ func EnsureNginxDirs() error {
 const nginxConfTemplate = `# 由 Hop 自动生成，请勿手动修改此文件
 # 修改请通过 Hop 管理界面进行
 
-user nginx;
+# user nginx;  # 注释掉，使用默认用户
 worker_processes {{.WorkerProcesses}};
 
 error_log /var/log/nginx/error.log warn;

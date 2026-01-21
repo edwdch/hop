@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/hop/backend/internal/database"
 )
 
 // ProxySite 代理站点配置
@@ -18,6 +20,9 @@ type ProxySite struct {
 	SSL        bool   `json:"ssl"`                  // 是否启用 SSL
 	SSLCert    string `json:"sslCert,omitempty"`    // SSL 证书路径
 	SSLKey     string `json:"sslKey,omitempty"`     // SSL 私钥路径
+
+	// 证书选择（新增）
+	CertificateID string `json:"certificateId,omitempty"` // 关联的证书 ID
 
 	// 上游配置
 	UpstreamScheme string `json:"upstreamScheme"` // http 或 https
@@ -101,6 +106,23 @@ func SaveProxySite(site ProxySite) error {
 	}
 	if site.UpstreamScheme == "" {
 		site.UpstreamScheme = "http"
+	}
+
+	// 如果启用 SSL 且指定了证书 ID，从数据库获取证书路径
+	if site.SSL && site.CertificateID != "" {
+		cert, err := database.GetCertificate(site.CertificateID)
+		if err != nil {
+			return fmt.Errorf("获取证书失败: %w", err)
+		}
+		// 验证证书状态
+		if cert.Status != "active" {
+			return fmt.Errorf("证书状态无效: %s，请选择有效的证书", cert.Status)
+		}
+		// 数据库中存储的路径是相对于 data 目录的，例如: nginx/ssl/example.com.crt
+		// Nginx 配置中需要相对于 nginx 目录的路径，例如: ssl/example.com.crt
+		// 所以需要去掉 "nginx/" 前缀
+		site.SSLCert = strings.TrimPrefix(cert.CertPath, "nginx/")
+		site.SSLKey = strings.TrimPrefix(cert.KeyPath, "nginx/")
 	}
 
 	// 渲染配置

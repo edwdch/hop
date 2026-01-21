@@ -150,6 +150,7 @@ export interface ProxySite {
     ssl: boolean;            // 是否启用 SSL
     sslCert?: string;        // SSL 证书路径
     sslKey?: string;         // SSL 私钥路径
+    certificateId?: string;  // 关联的证书 ID
     upstreamScheme: 'http' | 'https'; // 上游协议
     upstreamHost: string;    // 上游主机名/IP
     upstreamPort: number;    // 上游端口

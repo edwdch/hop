@@ -105,8 +105,8 @@ func (s *Server) Run() error {
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      s.router,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  5 * time.Minute, // 证书申请可能需要较长时间
+		WriteTimeout: 5 * time.Minute, // 证书申请可能需要较长时间
 		IdleTimeout:  60 * time.Second,
 	}
 

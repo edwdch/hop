@@ -298,6 +298,17 @@ func IssueCertificate(domains []string, dnsProviderID string, email string) (*da
 		return nil, fmt.Errorf("解析证书失败: %w", err)
 	}
 
+	// 计算相对于 data 目录的路径
+	// 例如: /path/to/data/nginx/ssl/example.com.crt -> nginx/ssl/example.com.crt
+	relCertPath, err := filepath.Rel(cfg.Data.Dir, destCertFile)
+	if err != nil {
+		relCertPath = destCertFile // 如果失败，回退使用绝对路径
+	}
+	relKeyPath, err := filepath.Rel(cfg.Data.Dir, destKeyFile)
+	if err != nil {
+		relKeyPath = destKeyFile
+	}
+
 	// 创建证书记录
 	domainsJSON, _ := json.Marshal(domains)
 	now := time.Now()
@@ -307,8 +318,8 @@ func IssueCertificate(domains []string, dnsProviderID string, email string) (*da
 		Domain:        mainDomain,
 		Domains:       string(domainsJSON),
 		DNSProviderID: dnsProviderID,
-		CertPath:      destCertFile,
-		KeyPath:       destKeyFile,
+		CertPath:      relCertPath,
+		KeyPath:       relKeyPath,
 		Issuer:        certInfo.Issuer,
 		NotBefore:     certInfo.NotBefore,
 		NotAfter:      certInfo.NotAfter,
@@ -467,15 +478,19 @@ func RenewCertificate(certID string, email string) error {
 	srcCertFile := filepath.Join(certDir, certDomain+".crt")
 	srcKeyFile := filepath.Join(certDir, certDomain+".key")
 
-	if err := copyFile(srcCertFile, cert.CertPath); err != nil {
+	// 将相对路径转换为绝对路径
+	destCertPath := filepath.Join(cfg.Data.Dir, cert.CertPath)
+	destKeyPath := filepath.Join(cfg.Data.Dir, cert.KeyPath)
+
+	if err := copyFile(srcCertFile, destCertPath); err != nil {
 		return fmt.Errorf("复制证书文件失败: %w", err)
 	}
-	if err := copyFile(srcKeyFile, cert.KeyPath); err != nil {
+	if err := copyFile(srcKeyFile, destKeyPath); err != nil {
 		return fmt.Errorf("复制私钥文件失败: %w", err)
 	}
 
 	// 解析新证书信息
-	certInfo, err := ParseCertificate(cert.CertPath)
+	certInfo, err := ParseCertificate(destCertPath)
 	if err != nil {
 		return fmt.Errorf("解析证书失败: %w", err)
 	}
